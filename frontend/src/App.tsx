@@ -8,6 +8,7 @@ import { api, login, logout, restoreSession } from './api'
 import type { Screen, ScreenDocument } from './api'
 import EditorPage from './components/editor/EditorPage'
 import PluginMarketplacePage from './components/plugins/PluginMarketplacePage'
+import { sha256Hex } from './sha256'
 import './App.css'
 
 const queryClient = new QueryClient()
@@ -387,11 +388,6 @@ function AccountSecurityPage() {
 
 type Manifest = { snapshot_id: string; update_type: 'full' | 'partial'; width: number; height: number; color_mode: 'bw' | 'bwry'; panel_layout: Screen['panel_layout']; encoding: string; frame_url: string; sha256: string; regions: Array<{ x: number; y: number; width: number; height: number; stride?: number; plane_byte_size?: number; url: string; sha256: string }> }
 
-async function sha256(data: Uint8Array) {
-  const digest = await crypto.subtle.digest('SHA-256', data.buffer as ArrayBuffer)
-  return Array.from(new Uint8Array(digest)).map(value => value.toString(16).padStart(2, '0')).join('')
-}
-
 function SimulatorPage() {
   const { t } = useTranslation(); const canvasRef = useRef<HTMLCanvasElement>(null)
   const { data: screens = [] } = useQuery({ queryKey: ['screens'], queryFn: () => api<Screen[]>('/api/v1/admin/screens') })
@@ -425,21 +421,27 @@ function SimulatorPage() {
   async function pull() {
     try {
       const started = performance.now()
-      const response = await fetch(`/api/v1/device/screens/${screenId}/manifest${base ? `?base_snapshot_id=${base}` : ''}`, { headers: { 'X-API-Key': key } })
+      // Avoid browser HTTP cache injecting If-None-Match; only 304 via base_snapshot_id is intentional.
+      const deviceFetch = (url: string) => fetch(url, { headers: { 'X-API-Key': key }, cache: 'no-store' })
+      const response = await deviceFetch(`/api/v1/device/screens/${screenId}/manifest${base ? `?base_snapshot_id=${base}` : ''}`)
       if (response.status === 304) { setLog(v => [`304 unchanged · ${new Date().toLocaleTimeString()}`, ...v]); return }
       if (!response.ok) throw new Error(await response.text())
       const manifest = await response.json() as Manifest
       setLastManifest(manifest)
       if (manifest.update_type === 'full') {
-        const bin = new Uint8Array(await (await fetch(manifest.frame_url, { headers: { 'X-API-Key': key } })).arrayBuffer())
-        if (await sha256(bin) !== manifest.sha256) throw new Error('Frame SHA-256 mismatch')
+        const frameResponse = await deviceFetch(manifest.frame_url)
+        if (!frameResponse.ok) throw new Error(await frameResponse.text())
+        const bin = new Uint8Array(await frameResponse.arrayBuffer())
+        if (await sha256Hex(bin) !== manifest.sha256) throw new Error('Frame SHA-256 mismatch')
         setLastFrame(new Blob([bin.buffer as ArrayBuffer], { type: 'application/octet-stream' }))
         decode(bin, manifest)
       } else {
         setLastFrame(undefined)
         for (const region of manifest.regions) {
-          const bin = new Uint8Array(await (await fetch(region.url, { headers: { 'X-API-Key': key } })).arrayBuffer())
-          if (await sha256(bin) !== region.sha256) throw new Error(`Region ${region.x},${region.y} SHA-256 mismatch`)
+          const regionResponse = await deviceFetch(region.url)
+          if (!regionResponse.ok) throw new Error(await regionResponse.text())
+          const bin = new Uint8Array(await regionResponse.arrayBuffer())
+          if (await sha256Hex(bin) !== region.sha256) throw new Error(`Region ${region.x},${region.y} SHA-256 mismatch`)
           const plane = region.plane_byte_size ?? Math.ceil(region.width / 8) * region.height
           decode(bin.subarray(plane, plane * 2), manifest, region)
         }
