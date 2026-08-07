@@ -12,6 +12,28 @@ import './App.css'
 
 const queryClient = new QueryClient()
 
+/** Clipboard API needs a secure context; fall back for plain HTTP LAN access. */
+async function copyText(value: string): Promise<void> {
+  if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(value)
+      return
+    } catch {
+      // continue to legacy fallback
+    }
+  }
+  const textarea = document.createElement('textarea')
+  textarea.value = value
+  textarea.setAttribute('readonly', '')
+  textarea.style.position = 'fixed'
+  textarea.style.left = '-9999px'
+  document.body.appendChild(textarea)
+  textarea.select()
+  const ok = document.execCommand('copy')
+  document.body.removeChild(textarea)
+  if (!ok) throw new Error('Copy failed')
+}
+
 function Button({ children, variant = 'default', ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'default' | 'outline' | 'danger' }) {
   return <button className={`button ${variant}`} {...props}>{children}</button>
 }
@@ -113,16 +135,20 @@ function ScreensPage() {
   const { data = [], isLoading } = useQuery({ queryKey: ['screens'], queryFn: () => api<Screen[]>('/api/v1/admin/screens') })
   useEffect(() => () => window.clearTimeout(copyTimer.current), [])
   async function copyScreenId(id: string) {
-    await navigator.clipboard.writeText(id)
-    setCopiedScreenId(id)
-    window.clearTimeout(copyTimer.current)
-    copyTimer.current = window.setTimeout(() => setCopiedScreenId(''), 2000)
+    try {
+      await copyText(id)
+      setCopiedScreenId(id)
+      window.clearTimeout(copyTimer.current)
+      copyTimer.current = window.setTimeout(() => setCopiedScreenId(''), 2000)
+    } catch {
+      // keep silent if both clipboard paths fail
+    }
   }
   async function generateKey(id: string) {
     const result = await api<{ api_key: string }>(`/api/v1/admin/screens/${id}/keys`, { method: 'POST' })
     setShownKey(result.api_key)
     try {
-      await navigator.clipboard.writeText(result.api_key)
+      await copyText(result.api_key)
       setKeyCopied(true)
     } catch {
       setKeyCopied(false)
@@ -146,7 +172,7 @@ function ScreensPage() {
   }
   return <><header className="page-header"><div><h1>{t('screens')}</h1><p className="muted">Manage display profiles and immutable render snapshots.</p></div><div className="screen-actions"><input ref={importRef} className="sr-only" type="file" accept="application/json,.json" onChange={event => { const file = event.target.files?.[0]; if (file) void importScreen(file) }} /><Button variant="outline" onClick={() => importRef.current?.click()}><FileUp size={16} />{t('importScreen')}</Button><Button onClick={() => setOpen(true)}><Plus size={16} />{t('createScreen')}</Button></div></header>
     {importError && <p className="error">{importError}</p>}
-    {shownKey && <div className="notice"><b>{t(keyCopied ? 'keyCopiedAutomatically' : 'copyKeyNow')}</b><code>{shownKey}</code><Button variant="outline" onClick={async () => { await navigator.clipboard.writeText(shownKey); setKeyCopied(true) }}><Copy size={16} />{t('copy')}</Button></div>}
+    {shownKey && <div className="notice"><b>{t(keyCopied ? 'keyCopiedAutomatically' : 'copyKeyNow')}</b><code>{shownKey}</code><Button variant="outline" onClick={async () => { try { await copyText(shownKey); setKeyCopied(true) } catch { setKeyCopied(false) } }}><Copy size={16} />{t('copy')}</Button></div>}
     <div className="screen-grid">{!isLoading && !data.length && <div className="empty card">{t('noScreens')}</div>}{data.map(screen => <article className="card screen-card" key={screen.id}>
       <div className="screen-thumb"><Monitor size={32} /><span className={`badge ${screen.color_mode}`}>{screen.color_mode.toUpperCase()}</span></div>
       <div><h3>{screen.name}</h3><p className="muted">{screen.width} × {screen.height} · {screen.refresh_seconds}s</p><button className="screen-id-copy" type="button" onClick={() => void copyScreenId(screen.id)} title={t('copyScreenId')}><span>{t('screenId')}</span><code>{screen.id}</code><Copy size={13} /></button></div>
@@ -238,10 +264,14 @@ function SecretsPage() {
   })
   useEffect(() => () => window.clearTimeout(copyNoticeTimer.current), [])
   async function copySecret(value: string, message: string) {
-    await navigator.clipboard.writeText(value)
-    setCopyNotice(message)
-    window.clearTimeout(copyNoticeTimer.current)
-    copyNoticeTimer.current = window.setTimeout(() => setCopyNotice(''), 2000)
+    try {
+      await copyText(value)
+      setCopyNotice(message)
+      window.clearTimeout(copyNoticeTimer.current)
+      copyNoticeTimer.current = window.setTimeout(() => setCopyNotice(''), 2000)
+    } catch {
+      // keep silent if both clipboard paths fail
+    }
   }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
