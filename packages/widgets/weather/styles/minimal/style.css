@@ -1,0 +1,28 @@
+.minimal {
+    height: 100%;
+    padding: 7px 8px;
+    position: relative
+}
+
+.minimal header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 17px
+}
+
+.minimal header span {
+    font-size: 11px
+}
+
+.minimal>strong {
+    display: block;
+    margin-top: 10px;
+    font-size: clamp(24px, 33vh, 54px)
+}
+
+.minimal footer {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    font-size: 16px
+}

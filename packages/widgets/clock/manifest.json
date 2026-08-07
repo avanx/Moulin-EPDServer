@@ -1,0 +1,31 @@
+{
+    "type": "clock",
+    "title": {
+        "zh-CN": "时间",
+        "en": "Clock"
+    },
+    "description": {
+        "zh-CN": "显示当前时间和日期",
+        "en": "Display the current time and date"
+    },
+    "version": "1.0.0",
+    "defaultStyle": "default",
+    "supportsMock": true,
+    "mockConfig": {
+        "style_id": "default",
+        "format": "%H:%M",
+        "timezone": "Asia/Shanghai",
+        "show_date": true
+    },
+    "mockData": {
+        "now": "2026-07-28T10:08:00+08:00"
+    },
+    "externalData": {
+        "provider": "system-clock",
+        "cacheSeconds": 0,
+        "description": {
+            "zh-CN": "使用渲染端系统当前时刻，再按组件配置的时区格式化",
+            "en": "Uses renderer system clock, then formats in the widget timezone"
+        }
+    }
+}

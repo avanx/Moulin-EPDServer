@@ -1,0 +1,15 @@
+{
+    "id": "default",
+    "title": {
+        "zh-CN": "点阵时间",
+        "en": "Dot matrix clock"
+    },
+    "defaultSize": {
+        "width": 420,
+        "height": 200
+    },
+    "requiredColors": [
+        "black",
+        "white"
+    ]
+}

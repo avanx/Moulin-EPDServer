@@ -1,0 +1,28 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+        "style_id": {
+            "type": "string",
+            "enum": [
+                "default",
+                "minimal",
+                "dotdate"
+            ],
+            "default": "default"
+        },
+        "format": {
+            "type": "string",
+            "default": "%H:%M"
+        },
+        "timezone": {
+            "type": "string",
+            "default": "Asia/Shanghai"
+        },
+        "show_date": {
+            "type": "boolean",
+            "default": true
+        }
+    }
+}

@@ -1,0 +1,78 @@
+{
+    "sections": [
+        {
+            "title": {
+                "zh-CN": "便签内容",
+                "en": "Note content"
+            },
+            "description": {
+                "zh-CN": "这些控件完全由本组件声明",
+                "en": "These controls are declared by this widget"
+            },
+            "fields": [
+                "title",
+                "text"
+            ]
+        },
+        {
+            "title": {
+                "zh-CN": "显示样式",
+                "en": "Display style"
+            },
+            "fields": [
+                "font_size",
+                "inverted"
+            ]
+        }
+    ],
+    "fields": {
+        "title": {
+            "control": "text",
+            "label": {
+                "zh-CN": "标题",
+                "en": "Title"
+            },
+            "placeholder": {
+                "zh-CN": "输入便签标题",
+                "en": "Enter note title"
+            }
+        },
+        "text": {
+            "control": "textarea",
+            "label": {
+                "zh-CN": "正文",
+                "en": "Body"
+            },
+            "rows": 4
+        },
+        "font_size": {
+            "control": "range",
+            "label": {
+                "zh-CN": "正文字号",
+                "en": "Body font size"
+            },
+            "min": 10,
+            "max": 72,
+            "step": 1,
+            "suffix": " px"
+        },
+        "inverted": {
+            "control": "toggle",
+            "label": {
+                "zh-CN": "反色显示",
+                "en": "Invert colors"
+            },
+            "help": {
+                "zh-CN": "使用黑色背景和白色文字",
+                "en": "Use a black background with white text"
+            }
+        }
+    },
+    "style": {
+        "accent": "#d97706",
+        "surface": "#fffbeb",
+        "border": "#fde68a",
+        "label": "#78350f",
+        "radius": 12
+    }
+}

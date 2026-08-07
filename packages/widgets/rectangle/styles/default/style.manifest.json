@@ -1,0 +1,15 @@
+{
+    "id": "default",
+    "title": {
+        "zh-CN": "默认",
+        "en": "Default"
+    },
+    "defaultSize": {
+        "width": 200,
+        "height": 120
+    },
+    "requiredColors": [
+        "black",
+        "white"
+    ]
+}

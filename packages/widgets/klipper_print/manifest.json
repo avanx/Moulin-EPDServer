@@ -1,0 +1,43 @@
+{
+    "type": "klipper_print",
+    "title": {
+        "zh-CN": "Klipper 打印进度",
+        "en": "Klipper print progress"
+    },
+    "description": {
+        "zh-CN": "通过 Moonraker 显示通用 Klipper 或 Snapmaker U1 的打印状态、进度、剩余时间与层数",
+        "en": "Display print status, progress, remaining time, and layers from generic Klipper or Snapmaker U1 printers through Moonraker"
+    },
+    "version": "1.0.0",
+    "defaultStyle": "default",
+    "supportsMock": true,
+    "mockConfig": {
+        "style_id": "default",
+        "compatibility": "general",
+        "host": "192.168.1.100",
+        "port": 0,
+        "api_secret_id": "",
+        "title": "Klipper 打印",
+        "cache_minutes": 1,
+        "show_task_name": true
+    },
+    "mockData": {
+        "status": "printing",
+        "percentage": 68,
+        "remainingMinutes": 47,
+        "currentLayer": 183,
+        "totalLayers": 268,
+        "taskName": "桌面收纳盒",
+        "_mock": true
+    },
+    "externalData": {
+        "provider": "klipper-moonraker",
+        "cacheSeconds": 60,
+        "staleSeconds": 600,
+        "secretConfigField": "api_secret_id",
+        "description": {
+            "zh-CN": "通过局域网 HTTP 连接 Moonraker，只读取打印状态",
+            "en": "Connects to Moonraker over LAN HTTP with read-only status requests"
+        }
+    }
+}

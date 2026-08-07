@@ -1,0 +1,12 @@
+.env
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+server/node_modules/
+server/dist/
+server/data/
+packages/*/dist/
+*.log
+/data
+/run
+/logs

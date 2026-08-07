@@ -1,0 +1,22 @@
+.note {
+    height: 100%;
+    padding: 10px;
+    border: 2px solid;
+    border-radius: 10px;
+    background: var(--note-bg, #fff);
+    color: var(--note-fg, #000)
+}
+
+.note header {
+    height: 30px;
+    border-bottom: 1px solid;
+    font-weight: 700;
+    font-size: 16px
+}
+
+.note div {
+    padding-top: 10px;
+    white-space: pre-wrap;
+    font-size: calc(var(--config-font-size, 24)*1px);
+    line-height: 1.25
+}

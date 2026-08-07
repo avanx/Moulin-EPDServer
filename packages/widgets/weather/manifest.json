@@ -1,0 +1,86 @@
+{
+    "type": "weather",
+    "title": {
+        "zh-CN": "天气",
+        "en": "Weather"
+    },
+    "description": {
+        "zh-CN": "显示指定地点的实时天气",
+        "en": "Display live weather for a location"
+    },
+    "version": "1.0.0",
+    "defaultStyle": "default",
+    "supportsMock": true,
+    "mockConfig": {
+        "style_id": "default",
+        "latitude": 31.23,
+        "longitude": 121.47,
+        "location_name": "Shanghai",
+        "temperature_unit": "celsius",
+        "show_border": false,
+        "cache_minutes": 15
+    },
+    "mockData": {
+        "temperature_2m": 24.6,
+        "relative_humidity_2m": 58,
+        "surface_pressure": 1012.4,
+        "wind_speed_10m": 12.6,
+        "wind_direction_10m": 135,
+        "weather_code": 1,
+        "is_day": 1,
+        "uv_index": 4.2,
+        "european_aqi": 36,
+        "hourly": {
+            "time": [
+                "2026-07-28T11:00",
+                "2026-07-28T12:00",
+                "2026-07-28T13:00",
+                "2026-07-28T14:00"
+            ],
+            "temperature_2m": [
+                25.1,
+                19.4,
+                -1.2,
+                22.8
+            ],
+            "precipitation_probability": [
+                5,
+                80,
+                70,
+                90
+            ],
+            "weather_code": [
+                0,
+                61,
+                71,
+                95
+            ],
+            "cloud_cover": [
+                5,
+                85,
+                90,
+                95
+            ],
+            "is_day": [
+                1,
+                1,
+                1,
+                1
+            ]
+        },
+        "_mock": true
+    },
+    "externalData": {
+        "provider": "open-meteo",
+        "cacheSeconds": 900,
+        "staleSeconds": 21600,
+        "allowedHosts": [
+            "api.open-meteo.com",
+            "air-quality-api.open-meteo.com"
+        ],
+        "description": {
+            "zh-CN": "请求 Open-Meteo 天气与空气质量；空气质量接口失败时仍显示天气",
+            "en": "Fetches Open-Meteo weather and air quality; forecast still works if AQI fails"
+        }
+    }
+}

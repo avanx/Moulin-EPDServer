@@ -1,0 +1,47 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+      args:
+        EPD_APT_MIRROR: ${EPD_APT_MIRROR:-1}
+        EPD_NPM_MIRROR: ${EPD_NPM_MIRROR:-1}
+        EPD_VERSION: ${EPD_VERSION:-}
+        EPD_GIT_SHA: ${EPD_GIT_SHA:-}
+        EPD_BUILD_TIME: ${EPD_BUILD_TIME:-}
+    restart: unless-stopped
+    environment:
+      EPD_DATABASE_URL: sqlite+aiosqlite:////data/epdserver.db
+      EPD_DATA_DIR: /data
+      EPD_SNAPSHOT_DIR: /data/snapshots
+      EPD_MASTER_KEY: ${EPD_MASTER_KEY:-}
+      EPD_ADMIN_USERNAME: ${EPD_ADMIN_USERNAME:-admin}
+      EPD_ADMIN_PASSWORD: ${EPD_ADMIN_PASSWORD:?Set EPD_ADMIN_PASSWORD in .env}
+      EPD_ALLOWED_ORIGINS: ${EPD_ALLOWED_ORIGINS:-http://localhost:5088}
+      EPD_SNAPSHOT_KEEP: ${EPD_SNAPSHOT_KEEP:-3}
+      EPD_DEBUG: "false"
+      EPD_COOKIE_SECURE: ${EPD_COOKIE_SECURE:-false}
+      NODE_OPTIONS: ${NODE_OPTIONS:---dns-result-order=ipv4first --no-network-family-autoselection}
+    volumes:
+      - epd_data:/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        EPD_APT_MIRROR: ${EPD_APT_MIRROR:-1}
+        EPD_NPM_MIRROR: ${EPD_NPM_MIRROR:-1}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${EPD_WEB_PORT:-5088}:80"
+
+volumes:
+  epd_data:

@@ -1,0 +1,17 @@
+.clock {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center
+}
+
+.clock strong {
+    font-size: clamp(18px, 48vh, 58px);
+    line-height: 1
+}
+
+.clock span {
+    font-size: clamp(10px, 14vh, 18px);
+    margin-top: 6px
+}

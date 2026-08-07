@@ -1,0 +1,19 @@
+<section class="klipper" data-class="data.statusClass">
+  <header>
+    <svg viewBox="0 0 64 64" aria-hidden="true">
+      <path d="M12 8h40v48H12zM18 14h28v27H18zM22 50h20M24 20h16v15H24zM28 35v6M36 35v6"/>
+      <path class="fill" d="M27 25h10v8H27z"/>
+    </svg>
+    <div><b data-text="config.title"></b><span class="task" data-text="data.taskName"></span></div>
+    <strong data-text="data.statusLabel"></strong>
+  </header>
+  <div class="progress">
+    <div><i data-percent="data.percentage"></i></div>
+    <b><span data-text="data.percentage"></span>%</b>
+  </div>
+  <footer>
+    <span>剩余 <b data-text="data.remaining"></b></span>
+    <span>层数 <b data-text="data.layers"></b></span>
+    <em data-text="data.staleMessage"></em>
+  </footer>
+</section>

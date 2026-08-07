@@ -1,0 +1,15 @@
+{
+    "id": "default",
+    "title": {
+        "zh-CN": "经典便签",
+        "en": "Classic note"
+    },
+    "defaultSize": {
+        "width": 320,
+        "height": 160
+    },
+    "requiredColors": [
+        "black",
+        "white"
+    ]
+}

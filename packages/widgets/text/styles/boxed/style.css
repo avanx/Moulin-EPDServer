@@ -1,0 +1,16 @@
+.text {
+    width: calc(100% - 2px);
+    height: calc(100% - 2px);
+    margin: 1px;
+    border: 2px solid;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    white-space: pre-wrap;
+    overflow: hidden;
+    font-weight: 700;
+    font-size: calc(var(--config-font-size, 32)*1px);
+    text-align: var(--config-align, left);
+    justify-content: safe var(--config-align, left)
+}

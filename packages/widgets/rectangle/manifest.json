@@ -1,0 +1,21 @@
+{
+    "type": "rectangle",
+    "title": {
+        "zh-CN": "矩形",
+        "en": "Rectangle"
+    },
+    "description": {
+        "zh-CN": "绘制矩形；宽度或高度缩小到 1 像素时退化为线段",
+        "en": "Draw a rectangle that degenerates into a line at one pixel wide or high"
+    },
+    "version": "1.0.0",
+    "defaultStyle": "default",
+    "supportsMock": true,
+    "mockConfig": {
+        "style_id": "default",
+        "filled": false,
+        "stroke_width": 2,
+        "corner_radius": 0
+    },
+    "mockData": {}
+}

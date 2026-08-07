@@ -1,0 +1,24 @@
+{
+    "type": "example_note",
+    "title": {
+        "zh-CN": "示例便签",
+        "en": "Example note"
+    },
+    "description": {
+        "zh-CN": "演示独立配置、设置界面和绘制样式",
+        "en": "Demonstrates self-contained config, settings UI, and drawing"
+    },
+    "version": "1.0.0",
+    "defaultStyle": "default",
+    "supportsMock": true,
+    "mockConfig": {
+        "style_id": "default",
+        "title": "Daily note",
+        "text": "Build small things well.",
+        "font_size": 24,
+        "inverted": false
+    },
+    "mockData": {
+        "text": "Build small things well."
+    }
+}

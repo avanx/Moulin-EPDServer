@@ -1,0 +1,15 @@
+{
+    "id": "boxed",
+    "title": {
+        "zh-CN": "边框卡片",
+        "en": "Boxed"
+    },
+    "defaultSize": {
+        "width": 260,
+        "height": 100
+    },
+    "requiredColors": [
+        "black",
+        "white"
+    ]
+}

@@ -1,0 +1,49 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+        "style_id": {
+            "type": "string",
+            "enum": [
+                "default",
+                "minimal"
+            ],
+            "default": "default"
+        },
+        "latitude": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90,
+            "default": 31.23
+        },
+        "longitude": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180,
+            "default": 121.47
+        },
+        "location_name": {
+            "type": "string",
+            "default": "Shanghai"
+        },
+        "temperature_unit": {
+            "type": "string",
+            "enum": [
+                "celsius",
+                "fahrenheit"
+            ],
+            "default": "celsius"
+        },
+        "show_border": {
+            "type": "boolean",
+            "default": false
+        },
+        "cache_minutes": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 120,
+            "default": 15
+        }
+    }
+}

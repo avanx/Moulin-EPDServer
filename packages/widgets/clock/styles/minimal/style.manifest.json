@@ -1,0 +1,15 @@
+{
+    "id": "minimal",
+    "title": {
+        "zh-CN": "极简",
+        "en": "Minimal"
+    },
+    "defaultSize": {
+        "width": 200,
+        "height": 80
+    },
+    "requiredColors": [
+        "black",
+        "white"
+    ]
+}

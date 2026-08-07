@@ -1,0 +1,48 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": [
+        "host",
+        "serial",
+        "access_secret_id"
+    ],
+    "additionalProperties": false,
+    "properties": {
+        "style_id": {
+            "type": "string",
+            "enum": [
+                "default"
+            ],
+            "default": "default"
+        },
+        "host": {
+            "type": "string",
+            "pattern": "^(10\\.(?:\\d{1,3}\\.){2}\\d{1,3}|172\\.(?:1[6-9]|2\\d|3[01])\\.(?:\\d{1,3}\\.)\\d{1,3}|192\\.168\\.(?:\\d{1,3}\\.)\\d{1,3})$",
+            "description": "printer private IPv4 address"
+        },
+        "serial": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9]{8,32}$",
+            "description": "printer serial number"
+        },
+        "access_secret_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "encrypted Bambu access code secret id or name"
+        },
+        "title": {
+            "type": "string",
+            "default": "拓竹打印"
+        },
+        "cache_minutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 30,
+            "default": 1
+        },
+        "show_task_name": {
+            "type": "boolean",
+            "default": true
+        }
+    }
+}

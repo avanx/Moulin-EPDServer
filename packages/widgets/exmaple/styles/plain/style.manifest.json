@@ -1,0 +1,15 @@
+{
+    "id": "plain",
+    "title": {
+        "zh-CN": "无框便签",
+        "en": "Borderless note"
+    },
+    "defaultSize": {
+        "width": 280,
+        "height": 140
+    },
+    "requiredColors": [
+        "black",
+        "white"
+    ]
+}

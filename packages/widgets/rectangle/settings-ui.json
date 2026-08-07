@@ -1,0 +1,57 @@
+{
+    "sections": [
+        {
+            "title": {
+                "zh-CN": "矩形外观",
+                "en": "Rectangle appearance"
+            },
+            "description": {
+                "zh-CN": "将宽度或高度设为 1 像素可得到垂直或水平线段",
+                "en": "Set the width or height to one pixel for a vertical or horizontal line"
+            },
+            "fields": [
+                "filled",
+                "stroke_width",
+                "corner_radius"
+            ]
+        }
+    ],
+    "fields": {
+        "filled": {
+            "control": "toggle",
+            "label": {
+                "zh-CN": "填充矩形",
+                "en": "Filled rectangle"
+            }
+        },
+        "stroke_width": {
+            "control": "range",
+            "label": {
+                "zh-CN": "描边宽度",
+                "en": "Stroke width"
+            },
+            "min": 1,
+            "max": 16,
+            "step": 1,
+            "suffix": " px"
+        },
+        "corner_radius": {
+            "control": "range",
+            "label": {
+                "zh-CN": "圆角半径",
+                "en": "Corner radius"
+            },
+            "min": 0,
+            "max": 100,
+            "step": 1,
+            "suffix": " px"
+        }
+    },
+    "style": {
+        "accent": "#18181b",
+        "surface": "#fafafa",
+        "border": "#d4d4d8",
+        "label": "#27272a",
+        "radius": 10
+    }
+}

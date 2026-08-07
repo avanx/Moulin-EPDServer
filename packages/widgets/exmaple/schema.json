@@ -1,0 +1,33 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+        "style_id": {
+            "type": "string",
+            "enum": [
+                "default",
+                "plain"
+            ],
+            "default": "default"
+        },
+        "title": {
+            "type": "string",
+            "default": "Daily note"
+        },
+        "text": {
+            "type": "string",
+            "default": "Build small things well."
+        },
+        "font_size": {
+            "type": "integer",
+            "minimum": 10,
+            "maximum": 72,
+            "default": 24
+        },
+        "inverted": {
+            "type": "boolean",
+            "default": false
+        }
+    }
+}

@@ -1,0 +1,124 @@
+{
+    "sections": [
+        {
+            "title": {
+                "zh-CN": "打印机连接",
+                "en": "Printer connection"
+            },
+            "description": {
+                "zh-CN": "通用模式默认连接 Moonraker 7125 端口；Snapmaker U1 模式默认连接 80 端口。端口填写 0 表示使用模式默认值。",
+                "en": "General mode uses Moonraker port 7125 by default; Snapmaker U1 mode uses port 80. Set port to 0 to use the mode default."
+            },
+            "fields": [
+                "compatibility",
+                "host",
+                "port",
+                "api_secret_id"
+            ]
+        },
+        {
+            "title": {
+                "zh-CN": "卡片显示",
+                "en": "Card display"
+            },
+            "fields": [
+                "title",
+                "show_task_name",
+                "cache_minutes"
+            ]
+        }
+    ],
+    "fields": {
+        "compatibility": {
+            "control": "segmented",
+            "label": {
+                "zh-CN": "兼容模式",
+                "en": "Compatibility mode"
+            },
+            "options": [
+                {
+                    "value": "general",
+                    "label": {
+                        "zh-CN": "通用",
+                        "en": "General"
+                    }
+                },
+                {
+                    "value": "snapmaker_u1",
+                    "label": {
+                        "zh-CN": "Snapmaker U1",
+                        "en": "Snapmaker U1"
+                    }
+                }
+            ]
+        },
+        "host": {
+            "control": "text",
+            "label": {
+                "zh-CN": "打印机私网 IP",
+                "en": "Printer private IP"
+            },
+            "placeholder": "192.168.1.100"
+        },
+        "port": {
+            "control": "number",
+            "label": {
+                "zh-CN": "Moonraker 端口",
+                "en": "Moonraker port"
+            },
+            "help": {
+                "zh-CN": "0 = 自动：通用 7125，Snapmaker U1 80",
+                "en": "0 = automatic: General 7125, Snapmaker U1 80"
+            },
+            "min": 0,
+            "max": 65535,
+            "step": 1
+        },
+        "api_secret_id": {
+            "control": "text",
+            "label": {
+                "zh-CN": "API Key 密钥 ID 或名称（可选）",
+                "en": "API-key secret ID or name (optional)"
+            },
+            "help": {
+                "zh-CN": "仅在 Moonraker 启用身份验证时填写；请将 API Key 保存到密钥管理",
+                "en": "Only needed when Moonraker authentication is enabled; store the API key in Secrets"
+            }
+        },
+        "title": {
+            "control": "text",
+            "label": {
+                "zh-CN": "卡片标题",
+                "en": "Card title"
+            }
+        },
+        "show_task_name": {
+            "control": "toggle",
+            "label": {
+                "zh-CN": "显示任务名称",
+                "en": "Show task name"
+            }
+        },
+        "cache_minutes": {
+            "control": "range",
+            "label": {
+                "zh-CN": "更新间隔",
+                "en": "Refresh interval"
+            },
+            "min": 1,
+            "max": 30,
+            "step": 1,
+            "suffix": {
+                "zh-CN": " 分钟",
+                "en": " min"
+            }
+        }
+    },
+    "style": {
+        "accent": "#16a34a",
+        "surface": "#f0fdf4",
+        "border": "#86efac",
+        "label": "#14532d",
+        "radius": 12
+    }
+}

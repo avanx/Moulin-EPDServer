@@ -1,0 +1,15 @@
+{
+    "id": "minimal",
+    "title": {
+        "zh-CN": "极简数据",
+        "en": "Minimal data"
+    },
+    "defaultSize": {
+        "width": 280,
+        "height": 140
+    },
+    "requiredColors": [
+        "black",
+        "white"
+    ]
+}

@@ -1,0 +1,15 @@
+{
+    "id": "dotdate",
+    "title": {
+        "zh-CN": "点阵日期",
+        "en": "Dot matrix date"
+    },
+    "defaultSize": {
+        "width": 220,
+        "height": 100
+    },
+    "requiredColors": [
+        "black",
+        "white"
+    ]
+}

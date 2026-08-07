@@ -1,0 +1,15 @@
+{
+    "id": "default",
+    "title": {
+        "zh-CN": "打印进度卡片",
+        "en": "Print progress card"
+    },
+    "defaultSize": {
+        "width": 430,
+        "height": 150
+    },
+    "requiredColors": [
+        "black",
+        "white"
+    ]
+}

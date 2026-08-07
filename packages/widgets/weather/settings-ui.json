@@ -1,0 +1,108 @@
+{
+    "sections": [
+        {
+            "title": {
+                "zh-CN": "地点",
+                "en": "Location"
+            },
+            "description": {
+                "zh-CN": "设置天气查询地点",
+                "en": "Choose the weather location"
+            },
+            "fields": [
+                "location_name",
+                "latitude",
+                "longitude"
+            ]
+        },
+        {
+            "title": {
+                "zh-CN": "显示与更新",
+                "en": "Display and refresh"
+            },
+            "fields": [
+                "temperature_unit",
+                "show_border",
+                "cache_minutes"
+            ]
+        }
+    ],
+    "fields": {
+        "location_name": {
+            "control": "text",
+            "label": {
+                "zh-CN": "地点名称",
+                "en": "Location name"
+            },
+            "placeholder": {
+                "zh-CN": "例如：上海",
+                "en": "For example: Shanghai"
+            }
+        },
+        "latitude": {
+            "control": "number",
+            "label": {
+                "zh-CN": "纬度",
+                "en": "Latitude"
+            },
+            "min": -90,
+            "max": 90,
+            "step": 0.01
+        },
+        "longitude": {
+            "control": "number",
+            "label": {
+                "zh-CN": "经度",
+                "en": "Longitude"
+            },
+            "min": -180,
+            "max": 180,
+            "step": 0.01
+        },
+        "temperature_unit": {
+            "control": "segmented",
+            "label": {
+                "zh-CN": "温度单位",
+                "en": "Temperature unit"
+            },
+            "options": [
+                {
+                    "value": "celsius",
+                    "label": "°C"
+                },
+                {
+                    "value": "fahrenheit",
+                    "label": "°F"
+                }
+            ]
+        },
+        "show_border": {
+            "control": "toggle",
+            "label": {
+                "zh-CN": "显示外框",
+                "en": "Show outer border"
+            }
+        },
+        "cache_minutes": {
+            "control": "range",
+            "label": {
+                "zh-CN": "更新间隔",
+                "en": "Refresh interval"
+            },
+            "min": 5,
+            "max": 120,
+            "step": 5,
+            "suffix": {
+                "zh-CN": " 分钟",
+                "en": " min"
+            }
+        }
+    },
+    "style": {
+        "accent": "#0284c7",
+        "surface": "#f0f9ff",
+        "border": "#bae6fd",
+        "label": "#0c4a6e",
+        "radius": 14
+    }
+}

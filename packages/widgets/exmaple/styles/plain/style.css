@@ -1,0 +1,18 @@
+.note {
+    height: 100%;
+    padding: 8px;
+    background: var(--note-bg, #fff);
+    color: var(--note-fg, #000)
+}
+
+.note header {
+    font-weight: 700;
+    font-size: 18px;
+    margin-bottom: 8px
+}
+
+.note div {
+    white-space: pre-wrap;
+    font-size: calc(var(--config-font-size, 24)*1px);
+    line-height: 1.25
+}

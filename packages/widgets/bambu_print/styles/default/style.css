@@ -1,0 +1,134 @@
+.bambu {
+    height: 100%;
+    padding: 10px 12px;
+    display: grid;
+    grid-template-rows: 56px 40px 1fr;
+    gap: 3px
+}
+
+.bambu header {
+    display: flex;
+    align-items: center;
+    min-width: 0
+}
+
+.bambu header svg {
+    width: 50px;
+    height: 50px;
+    flex: none
+}
+
+.bambu header svg * {
+    fill: none;
+    stroke: #000;
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round
+}
+
+.bambu header svg .fill {
+    fill: #000
+}
+
+.bambu header>div {
+    min-width: 0;
+    margin-left: 10px;
+    display: flex;
+    flex-direction: column
+}
+
+.bambu header b {
+    font-size: 22px;
+    line-height: 1.2
+}
+
+.task {
+    display: none;
+    max-width: 245px;
+    margin-top: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px
+}
+
+.config-show-task-name .task {
+    display: block
+}
+
+.bambu header strong {
+    margin-left: auto;
+    border: 2px solid;
+    padding: 4px 8px;
+    white-space: nowrap;
+    font-size: 15px
+}
+
+.running header strong,
+.prepare header strong,
+.pause header strong {
+    background: #000;
+    color: #fff
+}
+
+.progress {
+    display: grid;
+    grid-template-columns: 1fr 58px;
+    align-items: center;
+    gap: 10px
+}
+
+.progress>div {
+    height: 24px;
+    border: 3px solid;
+    padding: 3px
+}
+
+.progress i {
+    display: block;
+    width: var(--percent);
+    height: 100%;
+    background: #000
+}
+
+.progress>b {
+    font-size: 22px;
+    text-align: right
+}
+
+.bambu footer {
+    display: flex;
+    align-items: start;
+    gap: 18px;
+    font-size: 14px
+}
+
+.bambu footer span b {
+    font-size: 15px
+}
+
+.bambu footer em {
+    margin-left: auto;
+    font-size: 11px;
+    font-style: normal;
+    font-weight: 700
+}
+
+.idle footer span {
+    display: none
+}
+
+.finish,
+.offline,
+.unknown {
+    grid-template-rows: 1fr
+}
+
+.finish .progress,
+.finish footer,
+.offline .progress,
+.offline footer,
+.unknown .progress,
+.unknown footer {
+    display: none
+}

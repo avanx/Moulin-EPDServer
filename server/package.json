@@ -1,0 +1,38 @@
+{
+  "name": "epd-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --include \"../packages/widgets/**/*\" src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@fastify/cookie": "latest",
+    "@fastify/cors": "latest",
+    "@fastify/static": "latest",
+    "@sinclair/typebox": "latest",
+    "ajv": "latest",
+    "argon2": "latest",
+    "better-sqlite3": "latest",
+    "drizzle-orm": "latest",
+    "esbuild": "latest",
+    "fastify": "latest",
+    "fernet": "latest",
+    "mqtt": "^5.15.2",
+    "playwright": "latest",
+    "sharp": "latest"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "latest",
+    "@types/fernet": "latest",
+    "@types/node": "latest",
+    "tsx": "latest",
+    "typescript": "latest"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

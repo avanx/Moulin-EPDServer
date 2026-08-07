@@ -1,0 +1,63 @@
+{
+    "sections": [
+        {
+            "title": {
+                "zh-CN": "时间样式",
+                "en": "Time style"
+            },
+            "description": {
+                "zh-CN": "使用 strftime 格式控制时间显示",
+                "en": "Use a strftime pattern to format the time"
+            },
+            "fields": [
+                "format",
+                "timezone",
+                "show_date"
+            ]
+        }
+    ],
+    "fields": {
+        "format": {
+            "control": "text",
+            "label": {
+                "zh-CN": "时间格式",
+                "en": "Time format"
+            },
+            "placeholder": "%H:%M",
+            "help": {
+                "zh-CN": "例如 %H:%M 或 %I:%M %p",
+                "en": "For example %H:%M or %I:%M %p"
+            }
+        },
+        "timezone": {
+            "control": "text",
+            "label": {
+                "zh-CN": "时区",
+                "en": "Timezone"
+            },
+            "placeholder": "Asia/Shanghai",
+            "help": {
+                "zh-CN": "IANA 时区名，例如 Asia/Shanghai、America/New_York；无效时回退到服务器本地时区",
+                "en": "IANA timezone such as Asia/Shanghai or America/New_York; invalid values fall back to server local time"
+            }
+        },
+        "show_date": {
+            "control": "toggle",
+            "label": {
+                "zh-CN": "显示日期",
+                "en": "Show date"
+            },
+            "help": {
+                "zh-CN": "在时间下方显示年月日",
+                "en": "Show the date below the time"
+            }
+        }
+    },
+    "style": {
+        "accent": "#7c3aed",
+        "surface": "#f5f3ff",
+        "border": "#ddd6fe",
+        "label": "#4c1d95",
+        "radius": 12
+    }
+}

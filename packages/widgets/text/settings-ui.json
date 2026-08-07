@@ -1,0 +1,81 @@
+{
+    "sections": [
+        {
+            "title": {
+                "zh-CN": "文字内容",
+                "en": "Content"
+            },
+            "description": {
+                "zh-CN": "设置显示文字及排版方式",
+                "en": "Set the displayed text and typography"
+            },
+            "fields": [
+                "text",
+                "font_size",
+                "align"
+            ]
+        }
+    ],
+    "fields": {
+        "text": {
+            "control": "textarea",
+            "label": {
+                "zh-CN": "显示文字",
+                "en": "Text"
+            },
+            "placeholder": {
+                "zh-CN": "输入要显示的内容",
+                "en": "Enter text"
+            },
+            "rows": 3
+        },
+        "font_size": {
+            "control": "range",
+            "label": {
+                "zh-CN": "字号",
+                "en": "Font size"
+            },
+            "min": 8,
+            "max": 160,
+            "step": 1,
+            "suffix": " px"
+        },
+        "align": {
+            "control": "segmented",
+            "label": {
+                "zh-CN": "对齐",
+                "en": "Alignment"
+            },
+            "options": [
+                {
+                    "value": "left",
+                    "label": {
+                        "zh-CN": "左",
+                        "en": "Left"
+                    }
+                },
+                {
+                    "value": "center",
+                    "label": {
+                        "zh-CN": "中",
+                        "en": "Center"
+                    }
+                },
+                {
+                    "value": "right",
+                    "label": {
+                        "zh-CN": "右",
+                        "en": "Right"
+                    }
+                }
+            ]
+        }
+    },
+    "style": {
+        "accent": "#2563eb",
+        "surface": "#eff6ff",
+        "border": "#bfdbfe",
+        "label": "#1e3a8a",
+        "radius": 10
+    }
+}

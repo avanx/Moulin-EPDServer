@@ -1,0 +1,42 @@
+{
+    "type": "bambu_print",
+    "title": {
+        "zh-CN": "拓竹打印进度",
+        "en": "Bambu print progress"
+    },
+    "description": {
+        "zh-CN": "通过局域网显示拓竹打印机状态、进度、剩余时间与层数",
+        "en": "Display Bambu printer status, progress, remaining time, and layers over LAN"
+    },
+    "version": "1.0.0",
+    "defaultStyle": "default",
+    "supportsMock": true,
+    "mockConfig": {
+        "style_id": "default",
+        "host": "192.168.1.100",
+        "serial": "01P00A000000000",
+        "access_secret_id": "mock",
+        "title": "拓竹打印",
+        "cache_minutes": 1,
+        "show_task_name": true
+    },
+    "mockData": {
+        "status": "RUNNING",
+        "percentage": 68,
+        "remainingMinutes": 47,
+        "currentLayer": 183,
+        "totalLayers": 268,
+        "taskName": "桌面收纳盒",
+        "_mock": true
+    },
+    "externalData": {
+        "provider": "bambu-lan-mqtt",
+        "cacheSeconds": 60,
+        "staleSeconds": 600,
+        "secretConfigField": "access_secret_id",
+        "description": {
+            "zh-CN": "使用访问码通过局域网 MQTT TLS 连接拓竹打印机",
+            "en": "Connects to a Bambu printer over LAN MQTT TLS using its access code"
+        }
+    }
+}

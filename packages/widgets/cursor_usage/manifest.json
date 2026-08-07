@@ -1,0 +1,39 @@
+{
+    "type": "cursor_usage",
+    "title": {
+        "zh-CN": "Cursor 用量",
+        "en": "Cursor usage"
+    },
+    "description": {
+        "zh-CN": "显示 Cursor Models 与 Other Models 使用量",
+        "en": "Display Cursor Models and Other Models usage"
+    },
+    "version": "1.0.0",
+    "defaultStyle": "default",
+    "supportsMock": true,
+    "mockConfig": {
+        "style_id": "default",
+        "secret_id": "mock",
+        "title": "Cursor Usage",
+        "show_border": true,
+        "cache_minutes": 15
+    },
+    "mockData": {
+        "cursorModelsPercent": 4,
+        "otherModelsPercent": 99,
+        "_mock": true
+    },
+    "externalData": {
+        "provider": "cursor-current-period-usage",
+        "cacheSeconds": 900,
+        "staleSeconds": 86400,
+        "secretConfigField": "secret_id",
+        "allowedHosts": [
+            "cursor.com"
+        ],
+        "description": {
+            "zh-CN": "使用 WorkosCursorSessionToken 请求 Cursor 当前周期用量",
+            "en": "Uses WorkosCursorSessionToken for current-period usage"
+        }
+    }
+}

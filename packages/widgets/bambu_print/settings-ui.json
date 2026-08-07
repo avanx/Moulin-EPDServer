@@ -1,0 +1,93 @@
+{
+    "sections": [
+        {
+            "title": {
+                "zh-CN": "打印机连接",
+                "en": "Printer connection"
+            },
+            "description": {
+                "zh-CN": "在打印机“设置 → 网络”中查看 IP、序列号和访问码；将访问码保存到密钥管理，Purpose 使用默认的 General Key。无需开启 LAN Only 模式。",
+                "en": "Find the IP, serial number, and access code under Settings → Network. Store the access code in Secrets using the default General Key purpose. LAN Only mode is not required."
+            },
+            "fields": [
+                "host",
+                "serial",
+                "access_secret_id"
+            ]
+        },
+        {
+            "title": {
+                "zh-CN": "卡片显示",
+                "en": "Card display"
+            },
+            "fields": [
+                "title",
+                "show_task_name",
+                "cache_minutes"
+            ]
+        }
+    ],
+    "fields": {
+        "host": {
+            "control": "text",
+            "label": {
+                "zh-CN": "打印机私网 IP",
+                "en": "Printer private IP"
+            },
+            "placeholder": "192.168.1.100"
+        },
+        "serial": {
+            "control": "text",
+            "label": {
+                "zh-CN": "序列号",
+                "en": "Serial number"
+            }
+        },
+        "access_secret_id": {
+            "control": "text",
+            "label": {
+                "zh-CN": "访问码密钥 ID 或名称",
+                "en": "Access-code secret ID or name"
+            },
+            "help": {
+                "zh-CN": "不要在这里填写访问码明文",
+                "en": "Do not enter the access code itself here"
+            }
+        },
+        "title": {
+            "control": "text",
+            "label": {
+                "zh-CN": "卡片标题",
+                "en": "Card title"
+            }
+        },
+        "show_task_name": {
+            "control": "toggle",
+            "label": {
+                "zh-CN": "显示任务名称",
+                "en": "Show task name"
+            }
+        },
+        "cache_minutes": {
+            "control": "range",
+            "label": {
+                "zh-CN": "更新间隔",
+                "en": "Refresh interval"
+            },
+            "min": 1,
+            "max": 30,
+            "step": 1,
+            "suffix": {
+                "zh-CN": " 分钟",
+                "en": " min"
+            }
+        }
+    },
+    "style": {
+        "accent": "#16a34a",
+        "surface": "#f0fdf4",
+        "border": "#86efac",
+        "label": "#14532d",
+        "radius": 12
+    }
+}

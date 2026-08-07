@@ -1,0 +1,164 @@
+.weather {
+    height: 100%;
+    padding: 10px 12px;
+    display: grid;
+    grid-template-rows: 22px 112px 1fr 104px
+}
+
+.config-show-border .weather {
+    border: 2px solid;
+    border-radius: 10px
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 22px
+}
+
+header em {
+    font-style: normal;
+    font-size: 12px
+}
+
+.current {
+    display: flex
+}
+
+.weather-icon {
+    width: 92px;
+    height: 92px
+}
+
+.weather-icon *,
+.compass *,
+.forecast svg * {
+    fill: none;
+    stroke: #000;
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-linejoin: round
+}
+
+.fill {
+    fill: #000 !important
+}
+
+.current>div {
+    display: flex;
+    flex-direction: column;
+    padding-left: 20px
+}
+
+.current strong {
+    font-size: 62px;
+    line-height: 1
+}
+
+.current span {
+    font-size: 16px
+}
+
+.current i,
+.metrics i {
+    font-style: normal
+}
+
+.current aside {
+    margin-left: auto;
+    font-size: 20px
+}
+
+.current aside i {
+    font-size: 38px;
+    font-style: normal
+}
+
+.metrics {
+    border-top: 2px solid;
+    display: flex;
+    align-items: center;
+    gap: 16px
+}
+
+.compass {
+    width: 130px;
+    height: 130px
+}
+
+.needle {
+    transform: rotate(var(--rotate, 0deg));
+    transform-origin: 50% 50%
+}
+
+.metrics>div {
+    display: flex;
+    flex-direction: column;
+    font-size: 20px
+}
+
+.aqi {
+    margin-left: auto;
+    align-items: flex-end
+}
+
+.aqi strong {
+    font-size: 58px
+}
+
+.forecast {
+    border-top: 2px solid;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr)
+}
+
+.forecast div {
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    grid-template-rows: 22px 58px 18px;
+    font-size: 22px
+}
+
+.forecast svg {
+    width: 56px;
+    height: 56px
+}
+
+.defs {
+    position: absolute;
+    width: 0;
+    height: 0
+}
+
+.moon-shape,
+.cloud-shape,
+.rain-shape,
+.snow-shape,
+.storm-shape,
+.fog-shape {
+    display: none
+}
+
+.moon .moon-shape,
+.cloud .cloud-shape,
+.partly .cloud-shape,
+.rain .cloud-shape,
+.rain .rain-shape,
+.snow .cloud-shape,
+.snow .snow-shape,
+.storm .cloud-shape,
+.storm .storm-shape,
+.fog .cloud-shape,
+.fog .fog-shape {
+    display: block
+}
+
+.cloud .sun-shape,
+.rain .sun-shape,
+.snow .sun-shape,
+.storm .sun-shape,
+.fog .sun-shape,
+.moon .sun-shape {
+    display: none
+}
