@@ -189,6 +189,12 @@ function extractCursorSessionToken(input: string) {
   return match[1].replace(/\^%\^/g, '%').replace(/\^%/g, '%')
 }
 
+function purposeLabelKey(purpose: string): string {
+  if (purpose === 'cursor_session') return 'purposeCursorSession'
+  if (purpose === 'qweather_jwt') return 'purposeQweatherJwt'
+  return 'purposeGeneralKey'
+}
+
 function CurlTokenImport({ onToken }: { onToken: (token: string) => void }) {
   const { t } = useTranslation()
   const [curl, setCurl] = useState('')
@@ -217,10 +223,92 @@ function CurlTokenImport({ onToken }: { onToken: (token: string) => void }) {
   </div>
 }
 
+function QWeatherKeyPairPanel({
+  onPrivateKey,
+  publicKey,
+  onPublicKey,
+}: {
+  onPrivateKey: (value: string) => void
+  publicKey: string
+  onPublicKey: (value: string) => void
+}) {
+  const { t } = useTranslation()
+  const [error, setError] = useState('')
+  const [copyNotice, setCopyNotice] = useState(false)
+  const generate = useMutation({
+    mutationFn: () => api<{ privateKey: string; publicKey: string }>('/api/v1/admin/secrets/qweather/keypair', { method: 'POST' }),
+    onSuccess: (data) => {
+      setError('')
+      onPrivateKey(data.privateKey)
+      onPublicKey(data.publicKey)
+    },
+    onError: (reason) => setError(String(reason)),
+  })
+
+  return <div className="curl-import qweather-keypair">
+    <p className="muted">{t('qweatherKeyHint')}</p>
+    <Button type="button" variant="outline" disabled={generate.isPending} onClick={() => generate.mutate()}>
+      <KeyRound size={16} />{generate.isPending ? t('generatingQWeatherKey') : t('generateQWeatherKey')}
+    </Button>
+    {error && <p className="error">{error}</p>}
+    {publicKey && <>
+      <small className="success">{t('qweatherPrivateKeyReady')}</small>
+      <Field label={t('qweatherPublicKey')}>
+        <textarea rows={5} readOnly value={publicKey} spellCheck={false} />
+      </Field>
+      <Button type="button" variant="outline" onClick={async () => {
+        try {
+          await copyText(publicKey)
+          setCopyNotice(true)
+          window.setTimeout(() => setCopyNotice(false), 2000)
+        } catch {
+          setCopyNotice(false)
+        }
+      }}><Copy size={16} />{copyNotice ? t('qweatherPublicKeyCopied') : t('copy')}</Button>
+    </>}
+  </div>
+}
+
+function QWeatherPublicKeyDialog({ secret, close }: { secret: StoredSecret; close: () => void }) {
+  const { t } = useTranslation()
+  const [copied, setCopied] = useState(false)
+  const query = useQuery({
+    queryKey: ['secret-public-key', secret.id],
+    queryFn: () => api<{ publicKey: string }>(`/api/v1/admin/secrets/${secret.id}/public-key`),
+  })
+  return <div className="dialog-backdrop" onClick={close}>
+    <div className="card dialog" onClick={event => event.stopPropagation()}>
+      <h2>{t('qweatherPublicKeyTitle')}</h2>
+      <p className="muted">{secret.name}</p>
+      {query.isLoading && <p className="muted">{t('loadingPublicKey')}</p>}
+      {query.error && <p className="error">{String(query.error)}</p>}
+      {query.data && <>
+        <Field label={t('qweatherPublicKey')}>
+          <textarea rows={6} readOnly value={query.data.publicKey} spellCheck={false} />
+        </Field>
+        <div className="dialog-actions">
+          <Button type="button" variant="outline" onClick={close}>{t('close')}</Button>
+          <Button type="button" onClick={async () => {
+            try {
+              await copyText(query.data.publicKey)
+              setCopied(true)
+              window.setTimeout(() => setCopied(false), 2000)
+            } catch {
+              setCopied(false)
+            }
+          }}><Copy size={16} />{copied ? t('qweatherPublicKeyCopied') : t('copy')}</Button>
+        </div>
+      </>}
+      {!query.data && !query.isLoading && <div className="dialog-actions"><Button type="button" variant="outline" onClick={close}>{t('close')}</Button></div>}
+    </div>
+  </div>
+}
+
 function SecretUpdateDialog({ secret, close }: { secret: StoredSecret; close: () => void }) {
   const { t } = useTranslation()
   const client = useQueryClient()
   const [value, setValue] = useState('')
+  const [publicKey, setPublicKey] = useState('')
   const update = useMutation({
     mutationFn: (value: string) => api('/api/v1/admin/secrets', {
       method: 'POST',
@@ -229,6 +317,7 @@ function SecretUpdateDialog({ secret, close }: { secret: StoredSecret; close: ()
     onSuccess: () => {
       client.invalidateQueries({ queryKey: ['secrets'] })
       client.invalidateQueries({ queryKey: ['provider-status'] })
+      client.invalidateQueries({ queryKey: ['secret-public-key', secret.id] })
       close()
     },
   })
@@ -240,6 +329,7 @@ function SecretUpdateDialog({ secret, close }: { secret: StoredSecret; close: ()
     <h2>{t('updateSecret')}</h2>
     <p className="muted">{secret.name}</p>
     {secret.purpose === 'cursor_session' && <CurlTokenImport onToken={setValue} />}
+    {secret.purpose === 'qweather_jwt' && <QWeatherKeyPairPanel onPrivateKey={setValue} publicKey={publicKey} onPublicKey={setPublicKey} />}
     <Field label={t('newSecretValue')}><textarea name="value" rows={7} autoFocus required value={value} onChange={event => setValue(event.target.value)} placeholder={t('pasteNewSecret')} /></Field>
     {update.error && <p className="error">{String(update.error)}</p>}
     <div className="dialog-actions"><Button type="button" variant="outline" onClick={close}>{t('cancel')}</Button><Button type="submit" disabled={update.isPending}><Save size={16} />{update.isPending ? t('updating') : t('update')}</Button></div>
@@ -250,10 +340,13 @@ function SecretsPage() {
   const { t } = useTranslation()
   const client = useQueryClient()
   const [editingSecret, setEditingSecret] = useState<StoredSecret>()
+  const [publicKeySecret, setPublicKeySecret] = useState<StoredSecret>()
   const [copyNotice, setCopyNotice] = useState('')
   const copyNoticeTimer = useRef<number | undefined>(undefined)
   const [purpose, setPurpose] = useState('general_key')
+  const [name, setName] = useState('general-key')
   const [secretValue, setSecretValue] = useState('')
+  const [publicKey, setPublicKey] = useState('')
   const [importReset, setImportReset] = useState(0)
   const { data = [] } = useQuery({ queryKey: ['secrets'], queryFn: () => api<StoredSecret[]>('/api/v1/admin/secrets') })
   const remove = useMutation({
@@ -264,6 +357,15 @@ function SecretsPage() {
     },
   })
   useEffect(() => () => window.clearTimeout(copyNoticeTimer.current), [])
+  function changePurpose(next: string) {
+    setPurpose(next)
+    setSecretValue('')
+    setPublicKey('')
+    setImportReset(value => value + 1)
+    if (next === 'qweather_jwt' && (name === 'general-key' || name === 'cursor-session')) setName('qweather-ed25519')
+    else if (next === 'cursor_session' && (name === 'general-key' || name === 'qweather-ed25519')) setName('cursor-session')
+    else if (next === 'general_key' && (name === 'cursor-session' || name === 'qweather-ed25519')) setName('general-key')
+  }
   async function copySecret(value: string, message: string) {
     try {
       await copyText(value)
@@ -276,16 +378,54 @@ function SecretsPage() {
   }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const formElement = event.currentTarget
-    const form = new FormData(formElement)
-    await api('/api/v1/admin/secrets', { method: 'POST', body: JSON.stringify({ name: form.get('name'), purpose, value: secretValue }) })
-    formElement.reset()
+    await api('/api/v1/admin/secrets', { method: 'POST', body: JSON.stringify({ name, purpose, value: secretValue }) })
     setPurpose('general_key')
+    setName('general-key')
     setSecretValue('')
+    setPublicKey('')
     setImportReset(value => value + 1)
     await client.invalidateQueries({ queryKey: ['secrets'] })
   }
-  return <><header className="page-header"><div><h1>{t('secrets')}</h1><p className="muted">{t('tokenHint')}</p></div></header><div className="two-column"><form className="card form-card" onSubmit={submit}><Field label={t('name')}><input name="name" defaultValue="general-key" required /></Field><Field label="Purpose"><select name="purpose" value={purpose} onChange={event => setPurpose(event.target.value)}><option value="general_key">General Key</option><option value="cursor_session">Cursor Session</option></select></Field>{purpose === 'cursor_session' && <CurlTokenImport key={importReset} onToken={setSecretValue} />}<Field label="Secret value"><textarea name="value" rows={5} required value={secretValue} onChange={event => setSecretValue(event.target.value)} /></Field><Button type="submit"><Save size={16} />{t('save')}</Button></form><div className="card"><h3>{t('storedSecrets')}</h3>{data.map(secret => <div className="secret-row stored-secret-row" key={secret.id}><KeyRound size={16} /><div className="secret-details"><button type="button" className="secret-copy" title={t('copySecretName')} onClick={() => void copySecret(secret.name, t('secretNameCopied'))}><b>{secret.name}</b></button><p>{secret.purpose} · ID: <button type="button" className="secret-copy secret-id" title={t('copySecretId')} onClick={() => void copySecret(secret.id, t('secretIdCopied'))}>{secret.id}</button> · {new Date(secret.updated_at).toLocaleString()}</p></div><div className="secret-actions"><Button type="button" variant="outline" onClick={() => setEditingSecret(secret)}><Pencil size={15} />{t('update')}</Button><Button type="button" variant="danger" disabled={remove.isPending} onClick={() => { if (window.confirm(t('deleteSecretConfirm', { name: secret.name }))) remove.mutate(secret.id) }}><Trash2 size={15} />{t('delete')}</Button></div></div>)}{remove.error && <p className="error">{String(remove.error)}</p>}</div></div>{copyNotice && <div className="toast" role="status">{copyNotice}</div>}{editingSecret && <SecretUpdateDialog secret={editingSecret} close={() => setEditingSecret(undefined)} />}</>
+  return <>
+    <header className="page-header"><div><h1>{t('secrets')}</h1><p className="muted">{t('tokenHint')}</p></div></header>
+    <div className="two-column">
+      <form className="card form-card" onSubmit={submit}>
+        <Field label={t('name')}><input name="name" value={name} onChange={event => setName(event.target.value)} required /></Field>
+        <Field label={t('purpose')}>
+          <select name="purpose" value={purpose} onChange={event => changePurpose(event.target.value)}>
+            <option value="general_key">{t('purposeGeneralKey')}</option>
+            <option value="cursor_session">{t('purposeCursorSession')}</option>
+            <option value="qweather_jwt">{t('purposeQweatherJwt')}</option>
+          </select>
+        </Field>
+        {purpose === 'cursor_session' && <CurlTokenImport key={importReset} onToken={setSecretValue} />}
+        {purpose === 'qweather_jwt' && <QWeatherKeyPairPanel key={importReset} onPrivateKey={setSecretValue} publicKey={publicKey} onPublicKey={setPublicKey} />}
+        <Field label={t('secretValue')}>
+          <textarea name="value" rows={5} required value={secretValue} onChange={event => setSecretValue(event.target.value)} spellCheck={false} />
+        </Field>
+        <Button type="submit"><Save size={16} />{t('save')}</Button>
+      </form>
+      <div className="card">
+        <h3>{t('storedSecrets')}</h3>
+        {data.map(secret => <div className="secret-row stored-secret-row" key={secret.id}>
+          <KeyRound size={16} />
+          <div className="secret-details">
+            <button type="button" className="secret-copy" title={t('copySecretName')} onClick={() => void copySecret(secret.name, t('secretNameCopied'))}><b>{secret.name}</b></button>
+            <p>{t(purposeLabelKey(secret.purpose))} · ID: <button type="button" className="secret-copy secret-id" title={t('copySecretId')} onClick={() => void copySecret(secret.id, t('secretIdCopied'))}>{secret.id}</button> · {new Date(secret.updated_at).toLocaleString()}</p>
+          </div>
+          <div className="secret-actions">
+            {secret.purpose === 'qweather_jwt' && <Button type="button" variant="outline" onClick={() => setPublicKeySecret(secret)}><KeyRound size={15} />{t('viewPublicKey')}</Button>}
+            <Button type="button" variant="outline" onClick={() => setEditingSecret(secret)}><Pencil size={15} />{t('update')}</Button>
+            <Button type="button" variant="danger" disabled={remove.isPending} onClick={() => { if (window.confirm(t('deleteSecretConfirm', { name: secret.name }))) remove.mutate(secret.id) }}><Trash2 size={15} />{t('delete')}</Button>
+          </div>
+        </div>)}
+        {remove.error && <p className="error">{String(remove.error)}</p>}
+      </div>
+    </div>
+    {copyNotice && <div className="toast" role="status">{copyNotice}</div>}
+    {editingSecret && <SecretUpdateDialog secret={editingSecret} close={() => setEditingSecret(undefined)} />}
+    {publicKeySecret && <QWeatherPublicKeyDialog secret={publicKeySecret} close={() => setPublicKeySecret(undefined)} />}
+  </>
 }
 
 type ProviderState = { cacheKey: string; lastSuccessAt?: string; lastError?: string }

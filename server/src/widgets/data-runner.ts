@@ -63,9 +63,21 @@ function allowedHosts(manifest: WidgetManifest): Set<string> {
   return new Set((manifest.externalData?.allowedHosts ?? []).map((host) => host.toLowerCase()));
 }
 
+function hostAllowed(hostname: string, hosts: Set<string>): boolean {
+  const lower = hostname.toLowerCase();
+  if (hosts.has(lower)) return true;
+  for (const allowed of hosts) {
+    if (!allowed.startsWith("*.")) continue;
+    const suffix = allowed.slice(2);
+    if (!suffix || suffix.includes("*")) continue;
+    if (lower === suffix || lower.endsWith(`.${suffix}`)) return true;
+  }
+  return false;
+}
+
 function assertAllowedUrl(input: string, hosts: Set<string>): URL {
   const url = new URL(input);
-  if (url.protocol !== "https:" || !hosts.has(url.hostname.toLowerCase())) {
+  if (url.protocol !== "https:" || !hostAllowed(url.hostname, hosts)) {
     throw new Error(`Data source network access is not allowed: ${url.hostname}`);
   }
   return url;

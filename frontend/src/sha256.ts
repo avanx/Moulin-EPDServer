@@ -58,12 +58,7 @@ function sha256Sync(data: Uint8Array): string {
 }
 
 export async function sha256Hex(data: Uint8Array): Promise<string> {
-  // SubtleCrypto is unavailable outside secure contexts (plain HTTP LAN).
-  if (globalThis.isSecureContext) {
-    const copy = new Uint8Array(data.byteLength)
-    copy.set(data)
-    const digest = await crypto.subtle.digest('SHA-256', copy)
-    return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')
-  }
+  // Always use the pure JS path: crypto.subtle is missing on plain HTTP LAN hosts
+  // even when TypeScript types claim it exists.
   return sha256Sync(data)
 }

@@ -1,0 +1,27 @@
+<section class="weather" data-class="data.weatherClass">
+  <header><b data-text="config.location_name"></b><em data-text="data.stale"></em></header>
+  <div class="current">
+    <svg class="weather-icon" viewBox="0 0 100 100">
+      <g class="sun-shape"><circle cx="42" cy="39" r="20"/><path d="M42 7v10M42 61v10M10 39h10M64 39h10M19 16l8 8M57 54l8 8M65 16l-8 8M27 54l-8 8"/></g>
+      <path class="moon-shape" d="M68 67A33 33 0 1 1 42 10a28 28 0 0 0 26 57z"/>
+      <path class="cloud-shape" d="M18 66c-16-20 9-37 24-25 6-25 43-17 41 7 21 1 20 31-1 31H24C9 79 5 68 18 66z"/>
+      <path class="rain-shape" d="M30 82l-6 13M51 82l-6 13M72 82l-6 13"/>
+      <path class="snow-shape" d="M28 84v12M22 90h12M50 84v12M44 90h12M72 84v12M66 90h12"/>
+      <path class="storm-shape fill" d="M54 76 38 91h12l-6 9 23-20H54z"/>
+      <path class="fog-shape" d="M15 84h70M15 92h70"/>
+    </svg>
+    <div><strong data-text="data.temperature"></strong><span>HUM <i data-text="data.humidity"></i>%</span><span>PRESS <i data-text="data.pressure"></i> hPa</span></div>
+    <aside><b>UV <i data-text="data.uv"></i></b></aside>
+  </div>
+  <div class="metrics">
+    <svg class="compass" viewBox="0 0 100 100"><circle cx="50" cy="50" r="43"/><path d="M50 7v10M50 83v10M7 50h10M83 50h10M20 20l7 7M73 73l7 7M80 20l-7 7M27 73l-7 7"/><path class="needle fill" data-rotate="data.windDirection" d="M50 13 41 57l9-5 9 5z"/></svg>
+    <div><b>WIND</b><span><i data-text="data.windSpeed"></i> km/h</span></div>
+    <div class="aqi"><b>AIR QUALITY</b><strong data-text="data.aqi"></strong></div>
+  </div>
+  <div class="forecast">
+    <div><b data-text="data.forecast0Time"></b><svg data-class="data.forecast0Class" viewBox="0 0 100 100"><circle class="sun-shape" cx="38" cy="36" r="22"/><path class="moon-shape" d="M68 67A33 33 0 1 1 42 10a28 28 0 0 0 26 57z"/><path class="cloud-shape" d="M15 65c-10-18 12-31 25-19 6-25 40-13 38 8 20 0 18 27 0 27H23C8 81 4 68 15 65z"/><path class="rain-shape" d="M30 83l-5 12M52 83l-5 12M74 83l-5 12"/><path class="snow-shape" d="M28 84v12M22 90h12M50 84v12M44 90h12M72 84v12M66 90h12"/><path class="storm-shape fill" d="M54 76 38 91h12l-6 9 23-20H54z"/><path class="fog-shape" d="M15 84h70M15 92h70"/></svg><span data-text="data.forecast0Temp"></span></div>
+    <div><b data-text="data.forecast1Time"></b><svg data-class="data.forecast1Class" viewBox="0 0 100 100"><circle class="sun-shape" cx="38" cy="36" r="22"/><path class="moon-shape" d="M68 67A33 33 0 1 1 42 10a28 28 0 0 0 26 57z"/><path class="cloud-shape" d="M15 65c-10-18 12-31 25-19 6-25 40-13 38 8 20 0 18 27 0 27H23C8 81 4 68 15 65z"/><path class="rain-shape" d="M30 83l-5 12M52 83l-5 12M74 83l-5 12"/><path class="snow-shape" d="M28 84v12M22 90h12M50 84v12M44 90h12M72 84v12M66 90h12"/><path class="storm-shape fill" d="M54 76 38 91h12l-6 9 23-20H54z"/><path class="fog-shape" d="M15 84h70M15 92h70"/></svg><span data-text="data.forecast1Temp"></span></div>
+    <div><b data-text="data.forecast2Time"></b><svg data-class="data.forecast2Class" viewBox="0 0 100 100"><circle class="sun-shape" cx="38" cy="36" r="22"/><path class="moon-shape" d="M68 67A33 33 0 1 1 42 10a28 28 0 0 0 26 57z"/><path class="cloud-shape" d="M15 65c-10-18 12-31 25-19 6-25 40-13 38 8 20 0 18 27 0 27H23C8 81 4 68 15 65z"/><path class="rain-shape" d="M30 83l-5 12M52 83l-5 12M74 83l-5 12"/><path class="snow-shape" d="M28 84v12M22 90h12M50 84v12M44 90h12M72 84v12M66 90h12"/><path class="storm-shape fill" d="M54 76 38 91h12l-6 9 23-20H54z"/><path class="fog-shape" d="M15 84h70M15 92h70"/></svg><span data-text="data.forecast2Temp"></span></div>
+    <div><b data-text="data.forecast3Time"></b><svg data-class="data.forecast3Class" viewBox="0 0 100 100"><circle class="sun-shape" cx="38" cy="36" r="22"/><path class="moon-shape" d="M68 67A33 33 0 1 1 42 10a28 28 0 0 0 26 57z"/><path class="cloud-shape" d="M15 65c-10-18 12-31 25-19 6-25 40-13 38 8 20 0 18 27 0 27H23C8 81 4 68 15 65z"/><path class="rain-shape" d="M30 83l-5 12M52 83l-5 12M74 83l-5 12"/><path class="snow-shape" d="M28 84v12M22 90h12M50 84v12M44 90h12M72 84v12M66 90h12"/><path class="storm-shape fill" d="M54 76 38 91h12l-6 9 23-20H54z"/><path class="fog-shape" d="M15 84h70M15 92h70"/></svg><span data-text="data.forecast3Temp"></span></div>
+  </div>
+</section>

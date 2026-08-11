@@ -35,7 +35,9 @@ export async function bootstrapDatabase(): Promise<void> {
       ).run();
     })();
   }
-  sqlite.prepare("UPDATE secrets SET purpose = 'general_key' WHERE purpose NOT IN ('general_key', 'cursor_session')").run();
+  sqlite.prepare(
+    "UPDATE secrets SET purpose = 'general_key' WHERE purpose NOT IN ('general_key', 'cursor_session', 'qweather_jwt')",
+  ).run();
   sqlite.prepare(
     "UPDATE snapshots SET encoding = 'edp-bwry-v1' WHERE encoding = 'image2lcd-bwry-v1'",
   ).run();

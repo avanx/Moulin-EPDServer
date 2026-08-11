@@ -5,26 +5,22 @@ import { screens } from "./db/schema.js";
 import { publishSnapshot } from "./rendering/service.js";
 
 const timers = new Map<string, NodeJS.Timeout>();
-const active = new Set<string>();
-const pending = new Map<string, boolean>();
+/** Serializes publishes per screen so each caller waits for a snapshot built from the latest DB state. */
+const chains = new Map<string, Promise<string | null>>();
 
-export async function renderScreen(screenId: string, forceMock = false): Promise<void> {
-  if (active.has(screenId)) {
-    pending.set(screenId, (pending.get(screenId) ?? false) || forceMock);
-    return;
-  }
-  active.add(screenId);
+export async function renderScreen(screenId: string, forceMock = false): Promise<string | null> {
+  const previous = chains.get(screenId);
+  const next = previous
+    ? previous.then(
+      () => publishSnapshot(screenId, forceMock),
+      () => publishSnapshot(screenId, forceMock),
+    )
+    : publishSnapshot(screenId, forceMock);
+  chains.set(screenId, next);
   try {
-    let nextForceMock = forceMock;
-    do {
-      await publishSnapshot(screenId, nextForceMock);
-      if (!pending.has(screenId)) break;
-      nextForceMock = pending.get(screenId) ?? false;
-      pending.delete(screenId);
-    } while (true);
+    return await next;
   } finally {
-    active.delete(screenId);
-    pending.delete(screenId);
+    if (chains.get(screenId) === next) chains.delete(screenId);
   }
 }
 
@@ -32,7 +28,6 @@ export function unscheduleScreen(screenId: string): void {
   const timer = timers.get(screenId);
   if (timer) clearInterval(timer);
   timers.delete(screenId);
-  pending.delete(screenId);
 }
 
 export function scheduleScreen(screen: typeof screens.$inferSelect): void {
@@ -50,7 +45,6 @@ export function loadSchedules(): void {
 export function stopScheduler(): void {
   for (const timer of timers.values()) clearInterval(timer);
   timers.clear();
-  pending.clear();
 }
 
 export function schedulerRunning(): boolean {

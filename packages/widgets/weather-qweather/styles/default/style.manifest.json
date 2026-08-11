@@ -1,0 +1,15 @@
+{
+    "id": "default",
+    "title": {
+        "zh-CN": "天气仪表盘",
+        "en": "Weather dashboard"
+    },
+    "defaultSize": {
+        "width": 420,
+        "height": 420
+    },
+    "requiredColors": [
+        "black",
+        "white"
+    ]
+}

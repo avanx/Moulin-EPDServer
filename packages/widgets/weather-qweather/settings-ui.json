@@ -1,0 +1,176 @@
+{
+    "sections": [
+        {
+            "title": {
+                "zh-CN": "和风天气凭据",
+                "en": "QWeather credentials"
+            },
+            "description": {
+                "zh-CN": "在「密钥管理」选择用途「和风天气」生成密钥对，将公钥上传到和风控制台；组件里填写该密钥的 ID/名称，以及 API Host、项目 ID 与凭据 ID（kid）。",
+                "en": "In Secrets, choose purpose “QWeather” to generate a key pair, upload the public key to the QWeather console, then fill this widget with the secret ID/name, API Host, project ID, and credential ID (kid)."
+            },
+            "fields": [
+                "api_host",
+                "project_id",
+                "kid",
+                "private_key_secret_id"
+            ]
+        },
+        {
+            "title": {
+                "zh-CN": "地点",
+                "en": "Location"
+            },
+            "description": {
+                "zh-CN": "设置天气查询地点（经纬度最多两位小数）",
+                "en": "Choose the weather location (lat/lon up to 2 decimals)"
+            },
+            "fields": [
+                "location_name",
+                "latitude",
+                "longitude"
+            ]
+        },
+        {
+            "title": {
+                "zh-CN": "显示与更新",
+                "en": "Display and refresh"
+            },
+            "fields": [
+                "temperature_unit",
+                "show_border",
+                "cache_minutes"
+            ]
+        }
+    ],
+    "fields": {
+        "api_host": {
+            "control": "text",
+            "label": {
+                "zh-CN": "API Host",
+                "en": "API Host"
+            },
+            "placeholder": {
+                "zh-CN": "例如 abcxyz.qweatherapi.com",
+                "en": "For example: abcxyz.qweatherapi.com"
+            },
+            "help": {
+                "zh-CN": "在和风天气控制台 → 设置中查看，不要带 https://",
+                "en": "From QWeather Console → Settings; omit https://"
+            }
+        },
+        "project_id": {
+            "control": "text",
+            "label": {
+                "zh-CN": "项目 ID (sub)",
+                "en": "Project ID (sub)"
+            },
+            "placeholder": {
+                "zh-CN": "控制台项目管理中的项目 ID",
+                "en": "Project ID from console"
+            }
+        },
+        "kid": {
+            "control": "text",
+            "label": {
+                "zh-CN": "凭据 ID (kid)",
+                "en": "Credential ID (kid)"
+            },
+            "placeholder": {
+                "zh-CN": "JWT 凭据创建后显示的 ID",
+                "en": "ID shown after creating the JWT credential"
+            }
+        },
+        "private_key_secret_id": {
+            "control": "text",
+            "label": {
+                "zh-CN": "私钥密钥 ID 或名称",
+                "en": "Private-key secret ID or name"
+            },
+            "placeholder": {
+                "zh-CN": "例如 qweather-ed25519",
+                "en": "For example, qweather-ed25519"
+            },
+            "help": {
+                "zh-CN": "填写密钥管理中用途为「和风天气」的密钥 ID 或名称，不要在这里粘贴私钥",
+                "en": "Enter the ID/name of a Secrets entry with purpose QWeather; do not paste the private key here"
+            }
+        },
+        "location_name": {
+            "control": "text",
+            "label": {
+                "zh-CN": "地点名称",
+                "en": "Location name"
+            },
+            "placeholder": {
+                "zh-CN": "例如：上海",
+                "en": "For example: Shanghai"
+            }
+        },
+        "latitude": {
+            "control": "number",
+            "label": {
+                "zh-CN": "纬度",
+                "en": "Latitude"
+            },
+            "min": -90,
+            "max": 90,
+            "step": 0.01
+        },
+        "longitude": {
+            "control": "number",
+            "label": {
+                "zh-CN": "经度",
+                "en": "Longitude"
+            },
+            "min": -180,
+            "max": 180,
+            "step": 0.01
+        },
+        "temperature_unit": {
+            "control": "segmented",
+            "label": {
+                "zh-CN": "温度单位",
+                "en": "Temperature unit"
+            },
+            "options": [
+                {
+                    "value": "celsius",
+                    "label": "°C"
+                },
+                {
+                    "value": "fahrenheit",
+                    "label": "°F"
+                }
+            ]
+        },
+        "show_border": {
+            "control": "toggle",
+            "label": {
+                "zh-CN": "显示外框",
+                "en": "Show outer border"
+            }
+        },
+        "cache_minutes": {
+            "control": "range",
+            "label": {
+                "zh-CN": "更新间隔",
+                "en": "Refresh interval"
+            },
+            "min": 5,
+            "max": 120,
+            "step": 5,
+            "suffix": {
+                "zh-CN": " 分钟",
+                "en": " min"
+            }
+        }
+    },
+    "style": {
+        "accent": "#0284c7",
+        "surface": "#f0f9ff",
+        "border": "#bae6fd",
+        "label": "#0c4a6e",
+        "radius": 14
+    }
+}

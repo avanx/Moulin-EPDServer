@@ -12,7 +12,11 @@ import {
   screens, secrets, snapshotRegions, snapshots, widgetInstances,
 } from "../db/schema.js";
 import { composeScreen, renderDraft, renderWidgetPreview } from "../rendering/service.js";
-import { makeAdminSession, makeApiKey, verifyCsrfToken, verifyPassword, hashPassword, encryptSecret, isSessionExpired } from "../security.js";
+import {
+  makeAdminSession, makeApiKey, verifyCsrfToken, verifyPassword, hashPassword,
+  encryptSecret, decryptSecret, generateEd25519KeyPairPem, publicKeyPemFromPrivateKeyPem,
+  isSessionExpired,
+} from "../security.js";
 import { renderScreen, scheduleScreen, unscheduleScreen } from "../scheduler.js";
 import { runDataSource } from "../widgets/data-runner.js";
 import { registry } from "../widgets/registry.js";
@@ -39,8 +43,8 @@ function pluginSupportsColorMode(type: string, colorMode: string): boolean {
   }
 }
 
-const knownProviderTypes = new Set(["cursor_usage", "weather", "bambu_print", "klipper_print"]);
-const secretPurposes = new Set(["general_key", "cursor_session"]);
+const knownProviderTypes = new Set(["cursor_usage", "weather", "weather-qweather", "bambu_print", "klipper_print"]);
+const secretPurposes = new Set(["general_key", "cursor_session", "qweather_jwt"]);
 
 function providerCacheKey(widget: Widget): string | undefined {
   const value = widget.config;
@@ -54,6 +58,16 @@ function providerCacheKey(widget: Widget): string | undefined {
     const unit = String(value.temperature_unit ?? "");
     return Number.isFinite(latitude) && Number.isFinite(longitude) && unit
       ? `widget:weather:weather:v2:${latitude.toFixed(4)}:${longitude.toFixed(4)}:${unit}`
+      : undefined;
+  }
+  if (widget.widgetType === "weather-qweather") {
+    const host = String(value.api_host ?? "").trim().replace(/^https?:\/\//i, "").replace(/\/+$/g, "");
+    const projectId = String(value.project_id ?? "");
+    const kid = String(value.kid ?? "");
+    const latitude = Number(value.latitude);
+    const longitude = Number(value.longitude);
+    return host && projectId && kid && Number.isFinite(latitude) && Number.isFinite(longitude)
+      ? `widget:weather-qweather:weather-qweather:v1:${host}:${projectId}:${kid}:${latitude.toFixed(2)}:${longitude.toFixed(2)}`
       : undefined;
   }
   if (widget.widgetType === "bambu_print") {
@@ -620,8 +634,18 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       const widgets = db.select().from(widgetInstances).where(eq(widgetInstances.screenId, id)).all();
       await composeScreen(screen, widgets, { warnings, strict: true });
     }
-    setImmediate(() => void renderScreen(id, forceMock).catch((error) => app.log.error(error)));
-    return { queued: true, warnings };
+    try {
+      const snapshotId = await renderScreen(id, forceMock);
+      const latest = db.select().from(screens).where(eq(screens.id, id)).get();
+      return {
+        queued: false,
+        warnings,
+        snapshot_id: snapshotId ?? latest?.currentSnapshotId ?? null,
+      };
+    } catch (error) {
+      app.log.error(error);
+      return fail(reply, 500, String(error));
+    }
   });
   app.post(`${prefix}/screens/:screenId/draft-preview`, async (request, reply) => {
     if (!await requireAdmin(request, reply)) return;
@@ -708,11 +732,34 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     if (!await requireAdmin(request, reply)) return;
     return db.select().from(secrets).orderBy(asc(secrets.name)).all().map((row) => ({ id: row.id, name: row.name, purpose: row.purpose, updated_at: row.updatedAt }));
   });
+  app.post(`${prefix}/secrets/qweather/keypair`, async (request, reply) => {
+    if (!await requireAdmin(request, reply)) return;
+    return generateEd25519KeyPairPem();
+  });
+  app.get(`${prefix}/secrets/:secretId/public-key`, async (request, reply) => {
+    if (!await requireAdmin(request, reply)) return;
+    const id = String((request.params as Json).secretId);
+    const row = db.select().from(secrets).where(eq(secrets.id, id)).get();
+    if (!row) return fail(reply, 404);
+    if (row.purpose !== "qweather_jwt") return fail(reply, 422, "Public key is only available for QWeather JWT secrets");
+    try {
+      return { publicKey: publicKeyPemFromPrivateKeyPem(decryptSecret(row.encryptedValue)) };
+    } catch (error) {
+      return fail(reply, 422, error instanceof Error ? error.message : "Failed to derive public key");
+    }
+  });
   app.post(`${prefix}/secrets`, async (request, reply) => {
     if (!await requireAdmin(request, reply)) return;
     const body = object(request.body), name = String(body.name ?? ""), purpose = String(body.purpose ?? ""), value = String(body.value ?? "");
     if (!name || !purpose || !value) return fail(reply, 422, "Secret fields must not be empty");
     if (!secretPurposes.has(purpose)) return fail(reply, 422, "Unsupported secret purpose");
+    if (purpose === "qweather_jwt") {
+      try {
+        publicKeyPemFromPrivateKeyPem(value);
+      } catch (error) {
+        return fail(reply, 422, error instanceof Error ? error.message : "Invalid Ed25519 private key PEM");
+      }
+    }
     const old = db.select().from(secrets).where(eq(secrets.name, name)).get(), time = now();
     if (old) db.update(secrets).set({ purpose, encryptedValue: encryptSecret(value), updatedAt: time }).where(eq(secrets.id, old.id)).run();
     else db.insert(secrets).values({ id: crypto.randomUUID(), name, purpose, encryptedValue: encryptSecret(value), createdAt: time, updatedAt: time }).run();

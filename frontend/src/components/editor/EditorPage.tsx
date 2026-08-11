@@ -553,22 +553,22 @@ export default function EditorPage() {
     setRendering(true)
     setPublishedError('')
     try {
-      const previousSnapshotId = screen.current_snapshot_id
-      const result = await api<{ queued: boolean; warnings?: string[] }>(`/api/v1/admin/screens/${id}/render`, {
-        method: 'POST',
-        body: JSON.stringify({ data_source: useMockData ? 'mock' : 'real' }),
-      })
+      const result = await api<{ queued?: boolean; warnings?: string[]; snapshot_id?: string | null }>(
+        `/api/v1/admin/screens/${id}/render`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ data_source: useMockData ? 'mock' : 'real' }),
+        },
+      )
       if (result.warnings?.length) {
         setPublishedError(`真实数据加载失败，错误组件已显示在预览中：${result.warnings.join('；')}`)
       }
-      let updated = screen
-      for (let attempt = 0; attempt < 120; attempt += 1) {
-        updated = await api<Screen>(`/api/v1/admin/screens/${id}`)
-        if (updated.current_snapshot_id && updated.current_snapshot_id !== previousSnapshotId) break
-        await new Promise(resolve => window.setTimeout(resolve, 250))
+      let updated = await api<Screen>(`/api/v1/admin/screens/${id}`)
+      if (!result.snapshot_id && !updated.current_snapshot_id) {
+        throw new Error('渲染完成但未生成设备快照')
       }
-      if (!updated.current_snapshot_id || updated.current_snapshot_id === previousSnapshotId) {
-        throw new Error('渲染超时，未生成新的设备快照')
+      if (result.snapshot_id && updated.current_snapshot_id !== result.snapshot_id) {
+        updated = { ...updated, current_snapshot_id: result.snapshot_id }
       }
       const [source, device] = await Promise.all([
         apiBlob(`/api/v1/admin/screens/${id}/preview?mode=source`),

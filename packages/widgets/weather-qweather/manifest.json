@@ -1,0 +1,76 @@
+{
+    "type": "weather-qweather",
+    "title": {
+        "zh-CN": "天气-和风天气",
+        "en": "Weather (QWeather)"
+    },
+    "description": {
+        "zh-CN": "使用和风天气 JWT 显示指定地点的实时天气",
+        "en": "Display live weather via QWeather JWT authentication"
+    },
+    "version": "1.0.0",
+    "defaultStyle": "default",
+    "supportsMock": true,
+    "mockConfig": {
+        "style_id": "default",
+        "api_host": "abcxyz.qweatherapi.com",
+        "project_id": "mock-project",
+        "kid": "mock-kid",
+        "private_key_secret_id": "mock",
+        "latitude": 31.23,
+        "longitude": 121.47,
+        "location_name": "Shanghai",
+        "temperature_unit": "celsius",
+        "show_border": false,
+        "cache_minutes": 15
+    },
+    "mockData": {
+        "temp": 24.6,
+        "humidity": 58,
+        "pressure": 1012,
+        "windSpeed": 12.6,
+        "wind360": 135,
+        "icon": "101",
+        "obsTime": "2026-07-28T11:00+08:00",
+        "uv": 4,
+        "aqi": 36,
+        "hourly": [
+            {
+                "fxTime": "2026-07-28T12:00+08:00",
+                "temp": 25.1,
+                "icon": "100"
+            },
+            {
+                "fxTime": "2026-07-28T13:00+08:00",
+                "temp": 19.4,
+                "icon": "305"
+            },
+            {
+                "fxTime": "2026-07-28T14:00+08:00",
+                "temp": -1.2,
+                "icon": "400"
+            },
+            {
+                "fxTime": "2026-07-28T15:00+08:00",
+                "temp": 22.8,
+                "icon": "302"
+            }
+        ],
+        "_mock": true
+    },
+    "externalData": {
+        "provider": "qweather",
+        "cacheSeconds": 900,
+        "staleSeconds": 21600,
+        "secretConfigField": "private_key_secret_id",
+        "allowedHosts": [
+            "*.qweatherapi.com",
+            "devapi.qweather.com",
+            "api.qweather.com"
+        ],
+        "description": {
+            "zh-CN": "使用 Ed25519 JWT 请求和风天气实况、小时预报与空气质量；空气质量失败时仍显示天气",
+            "en": "Fetches QWeather now/hourly/AQI with Ed25519 JWT; forecast still works if AQI fails"
+        }
+    }
+}

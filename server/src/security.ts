@@ -1,4 +1,11 @@
-import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import {
+  createHash,
+  createPrivateKey,
+  createPublicKey,
+  generateKeyPairSync,
+  randomBytes,
+  timingSafeEqual,
+} from "node:crypto";
 
 import argon2 from "argon2";
 import fernet from "fernet";
@@ -69,6 +76,26 @@ export function decryptSecret(value: string): string {
     throw new Error("Secret cannot be decrypted with EPD_MASTER_KEY", {
       cause: error,
     });
+  }
+}
+
+export function generateEd25519KeyPairPem(): { privateKey: string; publicKey: string } {
+  const { privateKey, publicKey } = generateKeyPairSync("ed25519");
+  return {
+    privateKey: privateKey.export({ type: "pkcs8", format: "pem" }).toString(),
+    publicKey: publicKey.export({ type: "spki", format: "pem" }).toString(),
+  };
+}
+
+export function publicKeyPemFromPrivateKeyPem(privateKeyPem: string): string {
+  try {
+    const privateKey = createPrivateKey(privateKeyPem);
+    if (privateKey.asymmetricKeyType !== "ed25519") {
+      throw new Error("Expected an Ed25519 private key");
+    }
+    return createPublicKey(privateKey).export({ type: "spki", format: "pem" }).toString();
+  } catch (error) {
+    throw new Error("Invalid Ed25519 private key PEM", { cause: error });
   }
 }
 

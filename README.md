@@ -10,7 +10,7 @@
 - **服务端渲染**：HTML / CSS / SVG 组件 → Playwright 出图 → 墨水屏编码
 - **色彩模式**：黑白（`epd-bw-msb-v1`）与黑白红黄（`edp-bwry-v1`），含双面板布局
 - **增量刷新**：不可变快照 + 黑白局部更新，减少全屏刷写
-- **内置组件**：时钟、天气、文本、矩形、Cursor 用量、Bambu / Klipper 打印状态等
+- **内置组件**：时钟、天气（Open-Meteo / 和风天气）、文本、矩形、Cursor 用量、Bambu / Klipper 打印状态等
 - **无硬件调试**：浏览器内设备模拟器，无需真机即可预览
 - **密钥管理**：第三方 Token 经 `EPD_MASTER_KEY` 加密入库，组件侧只引用 Secret ID
 
@@ -38,6 +38,7 @@
 | --- | --- | --- |
 | [`clock`](packages/widgets/clock/) | 时间与日期 | 选择样式（`default` / `minimal` / `dotdate`），配置时间格式、IANA 时区与是否显示日期；取渲染端系统当前时刻后再按时区格式化 |
 | [`weather`](packages/widgets/weather/) | 实时天气（Open-Meteo） | 填写经纬度与地点名，可选摄氏/华氏、边框与缓存分钟数；天气与空气质量分属不同域名，空气质量失败时仍显示天气 |
+| [`weather-qweather`](packages/widgets/weather-qweather/) | 实时天气（和风天气 JWT） | 见 [使用说明](packages/widgets/weather-qweather/README.md) |
 | [`text`](packages/widgets/text/) | 自定义文本 | 填写文本、字号与对齐；样式含 `default` / `boxed` |
 | [`rectangle`](packages/widgets/rectangle/) | 矩形 / 线段装饰 | 配置填充、描边与圆角；宽或高为 1px 时退化为线段 |
 | [`cursor_usage`](packages/widgets/cursor_usage/) | Cursor 用量 | 见 [使用说明](packages/widgets/cursor_usage/README.md) |
@@ -45,6 +46,10 @@
 | [`klipper_print`](packages/widgets/klipper_print/) | Klipper / Snapmaker 打印进度 | 见下方简要说明 |
 
 `exmaple` 为开发示例组件（默认禁用），规范见 [packages/widgets/exmaple/README.md](packages/widgets/exmaple/README.md)。
+
+### 天气-和风天气
+
+通过和风天气 JWT（Ed25519）拉取实况、小时预报与空气质量。在「密钥管理」选择用途「和风天气」生成密钥对，将公钥上传到和风控制台后，把 API Host、项目 ID、凭据 ID（kid）与私钥 Secret 填入组件。完整步骤见 [packages/widgets/weather-qweather/README.md](packages/widgets/weather-qweather/README.md)。
 
 ### Klipper 打印进度
 
