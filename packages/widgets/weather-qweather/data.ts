@@ -89,17 +89,20 @@ function parseNumber(value: unknown): number | undefined {
   return Number.isFinite(number) ? number : undefined;
 }
 
-function iconClass(icon = "999"): string {
-  const code = Number(icon);
-  if (code === 100) return "sun";
-  if (code === 150) return "moon";
-  if ([101, 102, 103, 151, 152, 153].includes(code)) return "partly";
-  if ([302, 303, 304].includes(code)) return "storm";
-  if (code >= 300 && code < 400) return "rain";
-  if (code >= 400 && code < 500) return "snow";
-  if (code >= 500 && code < 600) return "fog";
-  if (code === 104) return "cloud";
-  return "cloud";
+const KNOWN_WEATHER_ICONS = new Set([
+  100, 101, 102, 103, 104, 150, 151, 152, 153,
+  300, 301, 302, 303, 304, 305, 306, 307, 308, 309, 310, 311, 312, 313, 314, 315, 316, 317, 318, 350, 351, 399,
+  400, 401, 402, 403, 404, 405, 406, 407, 408, 409, 410, 456, 457, 499,
+  500, 501, 502, 503, 504, 507, 508, 509, 510, 511, 512, 513, 514, 515,
+  900, 901, 999,
+]);
+
+/** Map QWeather icon / condition.code to CSS class `qi-{code}` (official icon set). */
+function weatherIconClass(icon?: string): string {
+  const raw = String(icon ?? "999").trim();
+  if (!/^\d+$/.test(raw)) return "qi-999";
+  const code = Number(raw);
+  return KNOWN_WEATHER_ICONS.has(code) ? `qi-${code}` : "qi-999";
 }
 
 function pickAqi(indexes: Array<{ code?: string; aqi?: number }> | undefined): number | undefined {
@@ -233,7 +236,7 @@ export function adaptData(source: QWeatherSource, config: { temperature_unit: st
     windDirection: source.wind360 ?? 0,
     uv: Math.round(source.uv ?? 0),
     aqi: source.aqi == null ? "--" : Math.round(source.aqi),
-    weatherClass: iconClass(source.icon),
+    weatherIcon: weatherIconClass(source.icon),
     stale: source._stale ? "STALE" : "",
   };
   for (let i = 0; i < 4; i++) {
@@ -246,7 +249,7 @@ export function adaptData(source: QWeatherSource, config: { temperature_unit: st
       : `${Math.round(config.temperature_unit === "fahrenheit" ? forecastTemp * 9 / 5 + 32 : forecastTemp)}°`;
     result[`forecast${i}Time`] = match?.[1] ?? "";
     result[`forecast${i}Temp`] = displayTemp;
-    result[`forecast${i}Class`] = iconClass(item?.icon);
+    result[`forecast${i}Icon`] = weatherIconClass(item?.icon);
   }
   return result;
 }

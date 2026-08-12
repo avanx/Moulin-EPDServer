@@ -49,6 +49,16 @@
 
 样式：`default`（仪表盘）或 `minimal`（极简温度）。
 
+`default` 样式使用 [和风天气图标](https://icons.qweather.com/) 官方线稿 SVG（非 fill；按 API 返回的 `icon` / `condition.code` 匹配，如 `301` → `qi-301`）。图标内嵌在 `styles/default/style.css`（`BEGIN/END QWEATHER ICONS` 标记段），渲染不依赖外网 CDN。更新图标时在本目录执行：
+
+```bash
+npm pack qweather-icons@1.8.0
+tar -xzf qweather-icons-1.8.0.tgz
+node scripts/generate-icons-css.mjs
+```
+
+布局样式直接改 `style.css` 标记段之前的部分即可；脚本只会替换图标段。
+
 ## 使用注意
 
 - 请求使用 `Authorization: Bearer <JWT>`，JWT 由服务端用私钥现场签名，有效期约 15 分钟。
