@@ -1,5 +1,20 @@
 export type PanelLayout = 'linear' | 'dual-panel-left-right'
 
+export type UserRole = 'admin' | 'user'
+
+export type AuthUser = {
+  username: string
+  role: UserRole
+}
+
+export type ManagedUser = {
+  id: string
+  username: string
+  role: UserRole
+  screen_count: number
+  created_at: string
+}
+
 export type Screen = {
   id: string
   name: string
@@ -10,6 +25,8 @@ export type Screen = {
   available_colors: string[]
   refresh_seconds: number
   enabled: boolean
+  owner_id: string
+  owner_username: string | null
   current_snapshot_id: string | null
 }
 
@@ -17,7 +34,7 @@ export type ScreenDocument = {
   format: 'epdserver-screen'
   version: 1
   exported_at: string | null
-  screen: Omit<Screen, 'id' | 'current_snapshot_id' | 'available_colors'>
+  screen: Omit<Screen, 'id' | 'owner_id' | 'owner_username' | 'current_snapshot_id' | 'available_colors'>
   plugins: Record<string, boolean>
   widgets: Array<Omit<Widget, 'id' | 'screen_id' | 'config_version'>>
 }
@@ -181,21 +198,23 @@ export async function apiBlob(path: string, init: RequestInit = {}) {
   return { blob: await response.blob(), headers: response.headers }
 }
 
-export async function login(username: string, password: string) {
-  const result = await api<{ username: string; csrfToken: string }>('/api/v1/admin/auth/login', {
+type SessionResponse = AuthUser & { csrfToken: string }
+
+export async function login(username: string, password: string): Promise<AuthUser> {
+  const result = await api<SessionResponse>('/api/v1/admin/auth/login', {
     method: 'POST',
     body: JSON.stringify({ username, password }),
   })
   csrfToken = result.csrfToken
   sessionStorage.setItem('epd-csrf', csrfToken)
-  return result
+  return { username: result.username, role: result.role }
 }
 
-export async function restoreSession() {
-  const result = await api<{ username: string; csrfToken: string }>('/api/v1/admin/auth/me')
+export async function restoreSession(): Promise<AuthUser> {
+  const result = await api<SessionResponse>('/api/v1/admin/auth/me')
   csrfToken = result.csrfToken
   sessionStorage.setItem('epd-csrf', csrfToken)
-  return result
+  return { username: result.username, role: result.role }
 }
 
 export async function logout() {

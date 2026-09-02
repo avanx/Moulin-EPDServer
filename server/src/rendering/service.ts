@@ -114,10 +114,12 @@ async function widgetHtml(
     warnings?: string[];
     sourceOverride?: WidgetSource;
     dataOverride?: unknown;
+    ownerId?: string;
   } = {},
 ): Promise<{ html: string; mode: "real" | "mock" }> {
   const plugin = registry.get(widget.widgetType);
   const configValue = registry.validate(widget.widgetType, widget.config);
+  const owner = options.ownerId === undefined ? {} : { ownerId: options.ownerId };
   let data: unknown;
   let mode: "real" | "mock" = "real";
   if (options.dataOverride !== undefined) {
@@ -131,7 +133,7 @@ async function widgetHtml(
       config: configValue,
       operation: "adapt",
       input: plugin.manifest.mockData,
-      options: { persist: false, locale: "zh-CN" },
+      options: { persist: false, locale: "zh-CN", ...owner },
     });
     mode = "mock";
   } else {
@@ -146,6 +148,7 @@ async function widgetHtml(
           persist: !options.allowMock,
           locale: "zh-CN",
           ...(options.strict === undefined ? {} : { strict: options.strict }),
+          ...owner,
         },
       });
     } catch (error) {
@@ -160,7 +163,7 @@ async function widgetHtml(
           config: configValue,
           operation: "adapt",
           input: plugin.manifest.mockData,
-          options: { persist: false, locale: "zh-CN" },
+          options: { persist: false, locale: "zh-CN", ...owner },
         });
         mode = "mock";
       }
@@ -182,7 +185,9 @@ export async function composeScreen(
   widgets: readonly Widget[],
   options: { forceMock?: boolean; allowMock?: boolean; strict?: boolean; warnings?: string[] } = {},
 ): Promise<{ html: string; modes: string[] }> {
-  const rendered = await Promise.all(widgets.map((widget) => widgetHtml(widget, options)));
+  const rendered = await Promise.all(
+    widgets.map((widget) => widgetHtml(widget, { ...options, ownerId: screen.ownerId })),
+  );
   return {
     html: composeScreenHtml({
       width: screen.width,
@@ -249,6 +254,7 @@ export async function renderWidgetPreview(
     const rendered = await widgetHtml(widget, {
       forceMock: true,
       allowMock: true,
+      ownerId: screen.ownerId,
       ...(sourceOverride ? { sourceOverride } : {}),
       ...(dataOverride !== undefined ? { dataOverride } : {}),
     });

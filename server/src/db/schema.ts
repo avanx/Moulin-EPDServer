@@ -22,6 +22,10 @@ export const adminUsers = sqliteTable(
     id: uuid("id").primaryKey(),
     username: text("username", { length: 80 }).notNull(),
     passwordHash: text("password_hash").notNull(),
+    role: text("role", { length: 16 })
+      .$type<"admin" | "user">()
+      .notNull()
+      .default("user"),
     ...timestampColumns,
   },
   (table) => [
@@ -44,6 +48,9 @@ export const adminSessions = sqliteTable(
 
 export const screens = sqliteTable("screens", {
   id: uuid("id").primaryKey(),
+  ownerId: uuid("owner_id")
+    .notNull()
+    .references(() => adminUsers.id, { onDelete: "cascade" }),
   name: text("name", { length: 120 }).notNull(),
   width: integer("width").notNull(),
   height: integer("height").notNull(),
@@ -59,7 +66,7 @@ export const screens = sqliteTable("screens", {
   enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
   currentSnapshotId: uuid("current_snapshot_id"),
   ...timestampColumns,
-});
+}, (table) => [index("ix_screens_owner_id").on(table.ownerId)]);
 
 export const deviceCredentials = sqliteTable(
   "device_credentials",
@@ -136,13 +143,22 @@ export const screenPlugins = sqliteTable(
   ],
 );
 
-export const secrets = sqliteTable("secrets", {
-  id: uuid("id").primaryKey(),
-  name: text("name", { length: 120 }).notNull().unique(),
-  purpose: text("purpose", { length: 80 }).notNull(),
-  encryptedValue: text("encrypted_value").notNull(),
-  ...timestampColumns,
-});
+export const secrets = sqliteTable(
+  "secrets",
+  {
+    id: uuid("id").primaryKey(),
+    ownerId: uuid("owner_id")
+      .notNull()
+      .references(() => adminUsers.id, { onDelete: "cascade" }),
+    name: text("name", { length: 120 }).notNull(),
+    purpose: text("purpose", { length: 80 }).notNull(),
+    encryptedValue: text("encrypted_value").notNull(),
+    ...timestampColumns,
+  },
+  (table) => [
+    uniqueIndex("ix_secrets_owner_name").on(table.ownerId, table.name),
+  ],
+);
 
 export const snapshots = sqliteTable("snapshots", {
   id: uuid("id").primaryKey(),

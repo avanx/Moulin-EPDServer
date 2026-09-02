@@ -1,17 +1,23 @@
-import { useEffect, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Copy, FileUp, Globe2, KeyRound, LayoutDashboard, LogOut, Monitor, Package, Pencil, Plus, RefreshCw, Save, Server, Settings2, Trash2 } from 'lucide-react'
+import { Copy, FileUp, Globe2, KeyRound, LayoutDashboard, LogOut, Monitor, Package, Pencil, Plus, RefreshCw, Save, Server, Settings2, Trash2, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, Redirect, Route, Switch, useLocation } from 'wouter'
 import { api, login, logout, restoreSession } from './api'
-import type { Screen, ScreenDocument } from './api'
+import type { AuthUser, ManagedUser, Screen, ScreenDocument } from './api'
 import EditorPage from './components/editor/EditorPage'
 import PluginMarketplacePage from './components/plugins/PluginMarketplacePage'
 import { sha256Hex } from './sha256'
 import './App.css'
 
 const queryClient = new QueryClient()
+
+const AuthContext = createContext<AuthUser>({ username: '', role: 'user' })
+
+function useAuth(): AuthUser {
+  return useContext(AuthContext)
+}
 
 /** Clipboard API needs a secure context; fall back for plain HTTP LAN access. */
 async function copyText(value: string): Promise<void> {
@@ -43,15 +49,14 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   return <label className="field"><span>{label}</span>{children}</label>
 }
 
-function LoginPage({ onLogin }: { onLogin: () => void }) {
+function LoginPage({ onLogin }: { onLogin: (user: AuthUser) => void }) {
   const { t } = useTranslation()
   const [error, setError] = useState('')
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
     try {
-      await login(String(form.get('username')), String(form.get('password')))
-      onLogin()
+      onLogin(await login(String(form.get('username')), String(form.get('password'))))
     } catch (reason) { setError(String(reason)) }
   }
   return <main className="login-page"><form className="card login-card" onSubmit={submit}>
@@ -67,13 +72,15 @@ function LoginPage({ onLogin }: { onLogin: () => void }) {
 function Shell({ children }: { children: React.ReactNode }) {
   const { t, i18n } = useTranslation()
   const [, navigate] = useLocation()
-  const links = [
+  const { role } = useAuth()
+  const links: Array<readonly [string, string, typeof Server]> = [
     ['/system', t('systemInfo'), Server],
     ['/', t('screens'), LayoutDashboard],
-    ['/plugins', t('pluginMarketplace'), Package],
+    ...(role === 'admin' ? [['/plugins', t('pluginMarketplace'), Package] as const] : []),
     ['/simulator', t('simulator'), Monitor],
     ['/secrets', t('secrets'), KeyRound],
-  ] as const
+    ...(role === 'admin' ? [['/system/users', t('users'), Users] as const] : []),
+  ]
   return <div className="app-shell">
     <aside><div className="sidebar-brand"><span className="brand-mark"><img src="/logo.png" alt="" /></span><b>{t('appName')}</b></div>
       <nav>{links.map(([href, label, Icon]) => <Link key={href} href={href}><Icon size={17} />{label}</Link>)}</nav>
@@ -125,6 +132,7 @@ function ScreenForm({ close }: { close: () => void }) {
 function ScreensPage() {
   const { t } = useTranslation()
   const [, navigate] = useLocation()
+  const isAdmin = useAuth().role === 'admin'
   const [open, setOpen] = useState(false)
   const [shownKey, setShownKey] = useState('')
   const [keyCopied, setKeyCopied] = useState(false)
@@ -176,7 +184,7 @@ function ScreensPage() {
     {shownKey && <div className="notice"><b>{t(keyCopied ? 'keyCopiedAutomatically' : 'copyKeyNow')}</b><code>{shownKey}</code><Button variant="outline" onClick={async () => { try { await copyText(shownKey); setKeyCopied(true) } catch { setKeyCopied(false) } }}><Copy size={16} />{t('copy')}</Button></div>}
     <div className="screen-grid">{!isLoading && !data.length && <div className="empty card">{t('noScreens')}</div>}{data.map(screen => <article className="card screen-card" key={screen.id}>
       <div className="screen-thumb"><Monitor size={32} /><span className={`badge ${screen.color_mode}`}>{screen.color_mode.toUpperCase()}</span></div>
-      <div><h3>{screen.name}</h3><p className="muted">{screen.width} × {screen.height} · {screen.refresh_seconds}s</p><button className="screen-id-copy" type="button" onClick={() => void copyScreenId(screen.id)} title={t('copyScreenId')}><span>{t('screenId')}</span><code>{screen.id}</code><Copy size={13} /></button></div>
+      <div><h3>{screen.name}</h3><p className="muted">{screen.width} × {screen.height} · {screen.refresh_seconds}s{isAdmin && screen.owner_username ? ` · ${t('owner')}: ${screen.owner_username}` : ''}</p><button className="screen-id-copy" type="button" onClick={() => void copyScreenId(screen.id)} title={t('copyScreenId')}><span>{t('screenId')}</span><code>{screen.id}</code><Copy size={13} /></button></div>
       <div className="screen-actions"><Link className="button default" href={`/screens/${screen.id}`}><Settings2 size={16} />{t('editor')}</Link><Button variant="outline" onClick={() => generateKey(screen.id)}><KeyRound size={16} />{t('createKey')}</Button></div>
     </article>)}</div>{copiedScreenId && <div className="toast">{t('screenIdCopied')}</div>}{open && <ScreenForm close={() => setOpen(false)} />}</>
 }
@@ -430,7 +438,7 @@ function SecretsPage() {
 
 type ProviderState = { cacheKey: string; lastSuccessAt?: string; lastError?: string }
 type SystemHealth = { status: string; database: string; scheduler: boolean; version: string; gitSha?: string; buildTime?: string }
-type SecurityInfo = { adminUsername: string; masterKeyConfigured: boolean }
+type SecurityInfo = { adminUsername: string; role: AuthUser['role']; masterKeyConfigured: boolean }
 
 function formatBuildVersion(health: SystemHealth): string {
   const parts = [health.version]
@@ -442,8 +450,13 @@ function formatBuildVersion(health: SystemHealth): string {
 function SystemInfoPage() {
   const { t } = useTranslation()
   const [, navigate] = useLocation()
+  const isAdmin = useAuth().role === 'admin'
   const health = useQuery({ queryKey: ['system-health'], queryFn: () => api<SystemHealth>('/health') })
-  const providers = useQuery({ queryKey: ['provider-status'], queryFn: () => api<ProviderState[]>('/api/v1/admin/providers/status') })
+  const providers = useQuery({
+    queryKey: ['provider-status'],
+    queryFn: () => api<ProviderState[]>('/api/v1/admin/providers/status'),
+    enabled: isAdmin,
+  })
 
   return <><header className="page-header"><div><h1>{t('systemInfo')}</h1><p className="muted">{t('systemInfoHint')}</p></div><Button variant="outline" onClick={() => { void health.refetch(); void providers.refetch() }}><RefreshCw size={16} />{t('refresh')}</Button></header>
     <div className="two-column">
@@ -453,13 +466,18 @@ function SystemInfoPage() {
         <div className="secret-row"><Server size={16} /><div><b>{t('database')}</b><p>{health.data.database}</p></div></div>
         <div className="secret-row"><RefreshCw size={16} /><div><b>{t('scheduler')}</b><p>{health.data.scheduler ? t('running') : t('stopped')}</p></div></div>
       </>}</section>
-      <section className="card"><h3>{t('providerStatus')}</h3>{providers.error && <p className="error">{String(providers.error)}</p>}{providers.data?.map(state => <div className="secret-row" key={state.cacheKey}><RefreshCw size={16} /><div><b>{state.cacheKey}</b><p>{state.lastError ? `${t('providerError')}: ${state.lastError}` : `${t('lastSuccess')}: ${state.lastSuccessAt ? new Date(state.lastSuccessAt).toLocaleString() : t('never')}`}</p></div></div>)}</section>
+      {isAdmin && <section className="card"><h3>{t('providerStatus')}</h3>{providers.error && <p className="error">{String(providers.error)}</p>}{providers.data?.map(state => <div className="secret-row" key={state.cacheKey}><RefreshCw size={16} /><div><b>{state.cacheKey}</b><p>{state.lastError ? `${t('providerError')}: ${state.lastError}` : `${t('lastSuccess')}: ${state.lastSuccessAt ? new Date(state.lastSuccessAt).toLocaleString() : t('never')}`}</p></div></div>)}</section>}
     </div>
     <section className="card" style={{ marginTop: 16 }}>
       <h3>{t('accountSecurity')}</h3>
-      <p className="muted">{t('accountSecurityHint')}</p>
-      <Button variant="outline" onClick={() => navigate('/system/account')}><Settings2 size={16} />{t('editAccount')}</Button>
+      <p className="muted">{t(isAdmin ? 'accountSecurityHint' : 'accountPasswordHint')}</p>
+      <Button variant="outline" onClick={() => navigate('/system/account')}><Settings2 size={16} />{t(isAdmin ? 'editAccount' : 'editPassword')}</Button>
     </section>
+    {isAdmin && <section className="card" style={{ marginTop: 16 }}>
+      <h3>{t('users')}</h3>
+      <p className="muted">{t('usersHint')}</p>
+      <Button variant="outline" onClick={() => navigate('/system/users')}><Users size={16} />{t('manageUsers')}</Button>
+    </section>}
   </>
 }
 
@@ -467,6 +485,7 @@ function AccountSecurityPage() {
   const { t } = useTranslation()
   const [, navigate] = useLocation()
   const queryClient = useQueryClient()
+  const isAdmin = useAuth().role === 'admin'
   const security = useQuery({ queryKey: ['security'], queryFn: () => api<SecurityInfo>('/api/v1/admin/security') })
   const [currentPassword, setCurrentPassword] = useState('')
   const [newUsername, setNewUsername] = useState('')
@@ -484,7 +503,7 @@ function AccountSecurityPage() {
       method: 'POST',
       body: JSON.stringify({
         currentPassword,
-        adminUsername: newUsername,
+        ...(isAdmin ? { adminUsername: newUsername } : {}),
         ...(newPassword ? { newPassword, confirmPassword } : {}),
       }),
     }),
@@ -507,7 +526,7 @@ function AccountSecurityPage() {
     <header className="page-header">
       <div>
         <h1>{t('accountSecurity')}</h1>
-        <p className="muted">{t('accountSecurityHint')}</p>
+        <p className="muted">{t(isAdmin ? 'accountSecurityHint' : 'accountPasswordHint')}</p>
       </div>
       <Button variant="outline" onClick={() => navigate('/system')}>{t('backToSystem')}</Button>
     </header>
@@ -515,7 +534,7 @@ function AccountSecurityPage() {
       {security.error && <p className="error">{String(security.error)}</p>}
       <form onSubmit={event => { event.preventDefault(); setSecurityMessage(''); setSecurityError(''); saveAccount.mutate() }}>
         <Field label={t('currentPassword')}><input type="password" autoComplete="current-password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} required /></Field>
-        <Field label={t('newUsername')}><input autoComplete="username" value={newUsername} onChange={e => setNewUsername(e.target.value)} required /></Field>
+        {isAdmin && <Field label={t('newUsername')}><input autoComplete="username" value={newUsername} onChange={e => setNewUsername(e.target.value)} required /></Field>}
         <Field label={t('newPassword')}><input type="password" autoComplete="new-password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder={t('passwordOptionalHint')} /></Field>
         <Field label={t('confirmPassword')}><input type="password" autoComplete="new-password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} /></Field>
         {securityMessage && <p className="muted">{securityMessage}</p>}
@@ -523,6 +542,82 @@ function AccountSecurityPage() {
         <Button type="submit" disabled={saveAccount.isPending}><Save size={16} />{t('saveAccount')}</Button>
       </form>
     </section>
+  </>
+}
+
+function UserForm({ close }: { close: () => void }) {
+  const { t } = useTranslation()
+  const client = useQueryClient()
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [error, setError] = useState('')
+  const create = useMutation({
+    mutationFn: () => api<ManagedUser>('/api/v1/admin/users', {
+      method: 'POST',
+      body: JSON.stringify({ username, password }),
+    }),
+    onSuccess: () => { void client.invalidateQueries({ queryKey: ['users'] }); close() },
+    onError: reason => setError(String(reason)),
+  })
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError('')
+    if (password !== confirmPassword) { setError(t('passwordMismatch')); return }
+    create.mutate()
+  }
+  return <div className="dialog-backdrop"><form className="card dialog" onSubmit={submit}>
+    <h2>{t('createUser')}</h2>
+    <p className="muted">{t('createUserHint')}</p>
+    <Field label={t('username')}><input autoComplete="off" value={username} onChange={event => setUsername(event.target.value)} required /></Field>
+    <Field label={t('password')}><input type="password" autoComplete="new-password" value={password} onChange={event => setPassword(event.target.value)} required /></Field>
+    <Field label={t('confirmPassword')}><input type="password" autoComplete="new-password" value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} required /></Field>
+    {error && <p className="error">{error}</p>}
+    <div className="dialog-actions">
+      <Button type="button" variant="outline" onClick={close}>{t('cancel')}</Button>
+      <Button type="submit" disabled={create.isPending}><Save size={16} />{t('save')}</Button>
+    </div>
+  </form></div>
+}
+
+function UsersPage() {
+  const { t } = useTranslation()
+  const client = useQueryClient()
+  const { username } = useAuth()
+  const [open, setOpen] = useState(false)
+  const users = useQuery({ queryKey: ['users'], queryFn: () => api<ManagedUser[]>('/api/v1/admin/users') })
+  const remove = useMutation({
+    mutationFn: (id: string) => api(`/api/v1/admin/users/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['users'] })
+      void client.invalidateQueries({ queryKey: ['screens'] })
+    },
+  })
+  return <>
+    <header className="page-header">
+      <div><h1>{t('users')}</h1><p className="muted">{t('usersHint')}</p></div>
+      <Button onClick={() => setOpen(true)}><Plus size={16} />{t('createUser')}</Button>
+    </header>
+    <section className="card">
+      {users.error && <p className="error">{String(users.error)}</p>}
+      {users.data?.map(user => <div className="secret-row" key={user.id}>
+        <Users size={16} />
+        <div className="secret-details">
+          <b>{user.username}{user.username === username ? ` · ${t('currentAccount')}` : ''}</b>
+          <p>{t(user.role === 'admin' ? 'roleAdmin' : 'roleUser')} · {t('screenCount', { count: user.screen_count })} · {new Date(user.created_at).toLocaleString()}</p>
+        </div>
+        <div className="secret-actions">
+          <Button
+            type="button"
+            variant="danger"
+            disabled={user.role === 'admin' || remove.isPending}
+            onClick={() => { if (window.confirm(t('deleteUserConfirm', { name: user.username }))) remove.mutate(user.id) }}
+          ><Trash2 size={15} />{t('delete')}</Button>
+        </div>
+      </div>)}
+      {remove.error && <p className="error">{String(remove.error)}</p>}
+    </section>
+    {open && <UserForm close={() => setOpen(false)} />}
   </>
 }
 
@@ -595,14 +690,17 @@ function SimulatorPage() {
 }
 
 function AuthenticatedApp() {
-  return <Shell><Switch><Route path="/"><ScreensPage /></Route><Route path="/system/account"><AccountSecurityPage /></Route><Route path="/system"><SystemInfoPage /></Route><Route path="/screens/:id"><EditorPage /></Route><Route path="/plugins"><PluginMarketplacePage /></Route><Route path="/secrets"><SecretsPage /></Route><Route path="/simulator"><SimulatorPage /></Route><Route><Redirect to="/" /></Route></Switch></Shell>
+  const isAdmin = useAuth().role === 'admin'
+  return <Shell><Switch><Route path="/"><ScreensPage /></Route><Route path="/system/account"><AccountSecurityPage /></Route><Route path="/system/users">{isAdmin ? <UsersPage /> : <Redirect to="/" />}</Route><Route path="/system"><SystemInfoPage /></Route><Route path="/screens/:id"><EditorPage /></Route><Route path="/plugins">{isAdmin ? <PluginMarketplacePage /> : <Redirect to="/" />}</Route><Route path="/secrets"><SecretsPage /></Route><Route path="/simulator"><SimulatorPage /></Route><Route><Redirect to="/" /></Route></Switch></Shell>
 }
 
 function App() {
   const [auth, setAuth] = useState<'loading' | 'yes' | 'no'>('loading')
-  useEffect(() => { restoreSession().then(() => setAuth('yes')).catch(() => setAuth('no')) }, [])
+  const [user, setUser] = useState<AuthUser>({ username: '', role: 'user' })
+  function accept(value: AuthUser) { setUser(value); setAuth('yes') }
+  useEffect(() => { restoreSession().then(accept).catch(() => setAuth('no')) }, [])
   if (auth === 'loading') return <div className="loading">Loading…</div>
-  return <QueryClientProvider client={queryClient}><Switch><Route path="/login">{auth === 'yes' ? <Redirect to="/" /> : <LoginPage onLogin={() => setAuth('yes')} />}</Route><Route>{auth === 'yes' ? <AuthenticatedApp /> : <Redirect to="/login" />}</Route></Switch></QueryClientProvider>
+  return <QueryClientProvider client={queryClient}><AuthContext.Provider value={user}><Switch><Route path="/login">{auth === 'yes' ? <Redirect to="/" /> : <LoginPage onLogin={accept} />}</Route><Route>{auth === 'yes' ? <AuthenticatedApp /> : <Redirect to="/login" />}</Route></Switch></AuthContext.Provider></QueryClientProvider>
 }
 
 export default App

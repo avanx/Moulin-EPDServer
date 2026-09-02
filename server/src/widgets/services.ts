@@ -1,4 +1,4 @@
-import { eq, or } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 import { isIP } from "node:net";
 import { connectAsync } from "mqtt";
 
@@ -40,6 +40,8 @@ interface KlipperPrinterStatus {
 export interface ServiceOptions {
   persist?: boolean;
   strict?: boolean;
+  /** Account the secrets are resolved against; secrets are never shared across users. */
+  ownerId?: string;
 }
 
 export type ProviderCacheRead =
@@ -146,8 +148,13 @@ export class WidgetServices {
   }
 
   async getSecret(idOrName: string): Promise<string> {
+    const ownerId = this.options.ownerId;
+    if (!ownerId) throw new Error("Secret lookup requires an owner");
     const row = db.select().from(secrets)
-      .where(or(eq(secrets.id, idOrName), eq(secrets.name, idOrName))).get();
+      .where(and(
+        eq(secrets.ownerId, ownerId),
+        or(eq(secrets.id, idOrName), eq(secrets.name, idOrName)),
+      )).get();
     if (!row) throw new Error(`Secret is not configured: ${idOrName}`);
     return decryptSecret(row.encryptedValue);
   }
