@@ -63,6 +63,9 @@ export const screens = sqliteTable("screens", {
   timezone: text("timezone", { length: 64 })
     .notNull()
     .default("Asia/Shanghai"),
+  silentEnabled: integer("silent_enabled", { mode: "boolean" }).notNull().default(false),
+  silentStart: text("silent_start", { length: 5 }).notNull().default("22:00"),
+  silentEnd: text("silent_end", { length: 5 }).notNull().default("07:00"),
   enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
   currentSnapshotId: uuid("current_snapshot_id"),
   ...timestampColumns,

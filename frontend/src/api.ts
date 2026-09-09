@@ -24,6 +24,11 @@ export type Screen = {
   panel_layout: PanelLayout
   available_colors: string[]
   refresh_seconds: number
+  timezone: string
+  silent_enabled: boolean
+  silent_start: string
+  silent_end: string
+  silent_active: boolean
   enabled: boolean
   owner_id: string
   owner_username: string | null
@@ -34,7 +39,7 @@ export type ScreenDocument = {
   format: 'epdserver-screen'
   version: 1
   exported_at: string | null
-  screen: Omit<Screen, 'id' | 'owner_id' | 'owner_username' | 'current_snapshot_id' | 'available_colors'>
+  screen: Omit<Screen, 'id' | 'owner_id' | 'owner_username' | 'current_snapshot_id' | 'available_colors' | 'silent_active'>
   plugins: Record<string, boolean>
   widgets: Array<Omit<Widget, 'id' | 'screen_id' | 'config_version'>>
 }

@@ -18,6 +18,7 @@ import {
   isSessionExpired,
 } from "../security.js";
 import { renderScreen, scheduleScreen, unscheduleScreen } from "../scheduler.js";
+import { isSilentAt, isValidClock, isValidTimeZone } from "../silent-time.js";
 import { runDataSource } from "../widgets/data-runner.js";
 import { registry } from "../widgets/registry.js";
 
@@ -25,7 +26,7 @@ type Account = typeof adminUsers.$inferSelect;
 type Screen = typeof screens.$inferSelect;
 type Widget = typeof widgetInstances.$inferSelect;
 type Json = Record<string, unknown>;
-type ScreenValues = Pick<Screen, "name" | "width" | "height" | "colorMode" | "panelLayout" | "refreshSeconds" | "enabled">;
+type ScreenValues = Pick<Screen, "name" | "width" | "height" | "colorMode" | "panelLayout" | "refreshSeconds" | "timezone" | "silentEnabled" | "silentStart" | "silentEnd" | "enabled">;
 
 const now = (): string => new Date().toISOString();
 const object = (value: unknown): Json => value && typeof value === "object" && !Array.isArray(value) ? value as Json : {};
@@ -129,7 +130,9 @@ function screenJson(row: Screen, owners?: Map<string, string>): Json {
     id: row.id, name: row.name, width: row.width, height: row.height, color_mode: row.colorMode,
     panel_layout: row.panelLayout,
     available_colors: row.colorMode === "bwry" ? ["black", "white", "red", "yellow"] : ["black", "white"],
-    refresh_seconds: row.refreshSeconds, enabled: row.enabled,
+    refresh_seconds: row.refreshSeconds, timezone: row.timezone,
+    silent_enabled: row.silentEnabled, silent_start: row.silentStart, silent_end: row.silentEnd,
+    silent_active: isSilentAt(row), enabled: row.enabled,
     owner_id: row.ownerId, owner_username: ownerName(row.ownerId, owners),
     current_snapshot_id: row.currentSnapshotId, created_at: row.createdAt, updated_at: row.updatedAt,
   };
@@ -155,17 +158,25 @@ function parseScreen(body: unknown, allowLegacyPanelLayout = false): ScreenValue
       : ""
   ));
   const refreshSeconds = integer(value.refresh_seconds, 900);
+  const timezone = String(value.timezone ?? "Asia/Shanghai");
+  const silentStart = String(value.silent_start ?? "22:00");
+  const silentEnd = String(value.silent_end ?? "07:00");
+  const silentEnabled = bool(value.silent_enabled, false);
   if (!name || name.length > 120 || width < 16 || width > 4096 || height < 16 || height > 4096 ||
       !["bw", "bwry"].includes(colorMode) || refreshSeconds < 2 || refreshSeconds > 86400 ||
       !["linear", "dual-panel-left-right"].includes(panelLayout) ||
       (panelLayout === "dual-panel-left-right" && width % 2 !== 0) ||
+      !isValidTimeZone(timezone) || !isValidClock(silentStart) || !isValidClock(silentEnd) ||
+      (silentEnabled && silentStart === silentEnd) ||
+      (value.silent_enabled !== undefined && typeof value.silent_enabled !== "boolean") ||
       (value.enabled !== undefined && typeof value.enabled !== "boolean")) {
     throw new Error("Invalid screen configuration");
   }
   return {
     name, width, height, colorMode,
     panelLayout: panelLayout as Screen["panelLayout"],
-    refreshSeconds, enabled: bool(value.enabled, true),
+    refreshSeconds, timezone, silentEnabled, silentStart, silentEnd,
+    enabled: bool(value.enabled, true),
   };
 }
 
@@ -405,7 +416,6 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
         id: crypto.randomUUID(),
         ownerId: user.id,
         ...parseScreen(request.body),
-        timezone: "Asia/Shanghai",
         currentSnapshotId: null,
         createdAt: time,
         updatedAt: time,
@@ -874,7 +884,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     const widgets = db.select().from(widgetInstances).where(eq(widgetInstances.screenId, id)).orderBy(asc(widgetInstances.zIndex)).all();
     const settings = new Map(db.select().from(screenPlugins).where(eq(screenPlugins.screenId, id)).all().map((row) => [row.pluginType, row.enabled]));
     const plugins = Object.fromEntries(db.select().from(pluginPackages).where(eq(pluginPackages.status, "available")).all().map((row) => [row.typeName, settings.get(row.typeName) ?? true]));
-    const screenBody = screenJson(screen); for (const key of ["id", "owner_id", "owner_username", "current_snapshot_id", "available_colors", "created_at", "updated_at"]) delete screenBody[key];
+    const screenBody = screenJson(screen); for (const key of ["id", "owner_id", "owner_username", "current_snapshot_id", "available_colors", "silent_active", "created_at", "updated_at"]) delete screenBody[key];
     return { format: "epdserver-screen", version: 1, exported_at: now(), screen: screenBody, plugins, widgets: widgets.map((row) => { const value = widgetJson(row); for (const key of ["id", "screen_id", "config_version"]) delete value[key]; return value; }) };
   });
 
@@ -909,7 +919,6 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
           id: crypto.randomUUID(),
           ownerId: user.id,
           ...values,
-          timezone: "Asia/Shanghai",
           currentSnapshotId: null,
           createdAt: time,
           updatedAt: time,

@@ -14,8 +14,8 @@ function Button({ children, variant = 'default', ...props }: React.ButtonHTMLAtt
   return <button className={`button ${variant}`} {...props}>{children}</button>
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label className="field"><span>{label}</span>{children}</label>
+function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
+  return <label className="field"><span>{label}</span>{children}{hint && <small className="field-hint">{hint}</small>}</label>
 }
 
 function localized(values: Record<string, string> | undefined, language: string, fallback: string) {
@@ -152,6 +152,10 @@ function ScreenSettings({ screen }: { screen: Screen }) {
         color_mode: form.get('color_mode'),
         panel_layout: form.get('panel_layout'),
         refresh_seconds: Number(form.get('refresh_seconds')),
+        timezone: String(form.get('timezone') ?? '').trim(),
+        silent_enabled: form.get('silent_enabled') === 'on',
+        silent_start: String(form.get('silent_start') ?? '').slice(0, 5),
+        silent_end: String(form.get('silent_end') ?? '').slice(0, 5),
         enabled: form.get('enabled') === 'on',
       }),
     })
@@ -164,7 +168,29 @@ function ScreenSettings({ screen }: { screen: Screen }) {
     <Field label={t('color')}><select name="color_mode" defaultValue={screen.color_mode}><option value="bw">BW</option><option value="bwry">BWRY</option></select></Field>
     <Field label={t('panelLayout')}><select name="panel_layout" required defaultValue={screen.panel_layout}><option value="linear">{t('panelLayoutLinear')}</option><option value="dual-panel-left-right">{t('panelLayoutDualLeftRight')}</option></select></Field>
     <Field label={t('interval')}><input name="refresh_seconds" type="number" min="2" defaultValue={screen.refresh_seconds} /></Field>
-    <label className="checkbox"><input name="enabled" type="checkbox" defaultChecked={screen.enabled} /> Enabled</label>
+    <Field label={t('timezone')} hint={t('timezoneHint')}>
+      <input name="timezone" list="screen-timezones" defaultValue={screen.timezone || 'Asia/Shanghai'} />
+      <datalist id="screen-timezones">
+        <option value="Asia/Shanghai" />
+        <option value="Asia/Hong_Kong" />
+        <option value="Asia/Taipei" />
+        <option value="Asia/Tokyo" />
+        <option value="UTC" />
+        <option value="America/New_York" />
+        <option value="America/Los_Angeles" />
+        <option value="Europe/London" />
+      </datalist>
+    </Field>
+    <fieldset className="silent-hours">
+      <legend>{t('silentTime')}</legend>
+      <label className="checkbox"><input name="silent_enabled" type="checkbox" defaultChecked={screen.silent_enabled} /> {t('silentEnabled')}</label>
+      <div className="grid-2">
+        <Field label={t('silentStart')}><input name="silent_start" type="time" required defaultValue={screen.silent_start || '22:00'} /></Field>
+        <Field label={t('silentEnd')}><input name="silent_end" type="time" required defaultValue={screen.silent_end || '07:00'} /></Field>
+      </div>
+      <p className="field-hint">{t('silentHint')}</p>
+    </fieldset>
+    <label className="checkbox"><input name="enabled" type="checkbox" defaultChecked={screen.enabled} /> {t('screenEnabled')}</label>
     <Button type="submit"><Save size={15} />{t('save')}</Button>
   </form>
 }
@@ -646,7 +672,7 @@ export default function EditorPage() {
   }
 
   if (!screen) return <p>Loading…</p>
-  return <><header className="page-header"><div><Link className="breadcrumb" href="/">Screens <ChevronRight size={14} /></Link><h1>{screen.name}</h1><p className="muted">{screen.width} × {screen.height} · {screen.color_mode.toUpperCase()}{dirty ? ` · ${t('unsaved')}` : ''}</p></div><div className="screen-actions"><input ref={importRef} className="sr-only" type="file" accept="application/json,.json" onChange={event => { const file = event.target.files?.[0]; if (file) void importScreen(file) }} /><Button variant="danger" onClick={() => void deleteScreen()} disabled={deleting}><Trash2 size={16} />{deleting ? t('deleting') : t('delete')}</Button><Button variant="outline" onClick={() => void exportScreen()}><Download size={16} />{t('exportScreen')}</Button><Button variant="outline" onClick={() => importRef.current?.click()}><FileUp size={16} />{t('importOverwrite')}</Button><Button onClick={saveLayout} disabled={!dirty}><Save size={16} />{t('saveLayout')}</Button><Button variant="outline" onClick={render} disabled={dirty || rendering} title={dirty ? t('saveBeforeRender') : ''}><RefreshCw size={16} />{rendering ? t('updating') : t('render')}</Button></div></header>
+  return <><header className="page-header"><div><Link className="breadcrumb" href="/">Screens <ChevronRight size={14} /></Link><h1>{screen.name}</h1><p className="muted">{screen.width} × {screen.height} · {screen.color_mode.toUpperCase()}{screen.silent_active ? ` · ${t('silentActive')}` : screen.silent_enabled ? ` · ${t('silentTime')} ${screen.silent_start}–${screen.silent_end}` : ''}{dirty ? ` · ${t('unsaved')}` : ''}</p></div><div className="screen-actions"><input ref={importRef} className="sr-only" type="file" accept="application/json,.json" onChange={event => { const file = event.target.files?.[0]; if (file) void importScreen(file) }} /><Button variant="danger" onClick={() => void deleteScreen()} disabled={deleting}><Trash2 size={16} />{deleting ? t('deleting') : t('delete')}</Button><Button variant="outline" onClick={() => void exportScreen()}><Download size={16} />{t('exportScreen')}</Button><Button variant="outline" onClick={() => importRef.current?.click()}><FileUp size={16} />{t('importOverwrite')}</Button><Button onClick={saveLayout} disabled={!dirty}><Save size={16} />{t('saveLayout')}</Button><Button variant="outline" onClick={render} disabled={dirty || rendering} title={dirty ? t('saveBeforeRender') : ''}><RefreshCw size={16} />{rendering ? t('updating') : t('render')}</Button></div></header>
     {saveError && <p className="error">{saveError}</p>}
     <div className="editor-layout">
       <PluginPalette plugins={plugins} language={i18n.language} availableColors={screen.available_colors} onAdd={addWidget} />

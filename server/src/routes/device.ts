@@ -7,6 +7,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { deviceCredentials, screens, snapshotRegions, snapshots } from "../db/schema.js";
 import { apiKeyPrefix, verifyApiKey } from "../security.js";
+import { isSilentAt, secondsUntilSilentEnd } from "../silent-time.js";
 
 type Json = Record<string, unknown>;
 const attempts = new Map<string, number[]>();
@@ -79,8 +80,12 @@ export const deviceRoutes: FastifyPluginAsync = async (app) => {
     const query = request.query as Json;
     const base = typeof query.base_snapshot_id === "string" ? query.base_snapshot_id : null;
     const ifNoneMatch = String(request.headers["if-none-match"] ?? "").replaceAll('"', "");
+    const silentActive = isSilentAt(screen);
+    const refreshAfterSeconds = silentActive ? secondsUntilSilentEnd(screen) : screen.refreshSeconds;
     reply.header("ETag", `"${snapshot.id}"`).header("Cache-Control", "private, no-cache");
-    if (ifNoneMatch === snapshot.id || base === snapshot.id) return reply.code(304).send();
+    if (ifNoneMatch === snapshot.id || base === snapshot.id) {
+      return reply.header("Retry-After", String(refreshAfterSeconds)).code(304).send();
+    }
     const canPartial = screen.colorMode === "bw" && base !== null && base === snapshot.baseSnapshotId;
     const stored = canPartial ? db.select().from(snapshotRegions).where(eq(snapshotRegions.snapshotId, snapshot.id)).all() : [];
     const origin = `${request.protocol}://${request.headers.host}`;
@@ -98,7 +103,7 @@ export const deviceRoutes: FastifyPluginAsync = async (app) => {
       screen_id: screen.id, snapshot_id: snapshot.id, base_snapshot_id: snapshot.baseSnapshotId,
       update_type: regions.length ? "partial" : "full", width: screen.width, height: screen.height,
       color_mode: screen.colorMode, panel_layout: screen.panelLayout,
-      encoding: snapshot.encoding, refresh_after_seconds: screen.refreshSeconds,
+      encoding: snapshot.encoding, refresh_after_seconds: refreshAfterSeconds, silent_active: silentActive,
       byte_size: snapshot.byteSize, sha256: snapshot.sha256, frame_url: frameUrl, regions,
     };
   });

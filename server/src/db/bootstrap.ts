@@ -10,7 +10,7 @@ const ddl = `
 CREATE TABLE IF NOT EXISTS admin_users(id VARCHAR(36) PRIMARY KEY,username VARCHAR(80) NOT NULL UNIQUE,password_hash TEXT NOT NULL,role VARCHAR(16) NOT NULL DEFAULT 'user',created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL);
 CREATE TABLE IF NOT EXISTS admin_sessions(id VARCHAR(64) PRIMARY KEY,user_id VARCHAR(36) NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,csrf_token VARCHAR(64) NOT NULL,expires_at DATETIME NOT NULL);
 CREATE INDEX IF NOT EXISTS ix_admin_sessions_expires_at ON admin_sessions(expires_at);
-CREATE TABLE IF NOT EXISTS screens(id VARCHAR(36) PRIMARY KEY,owner_id VARCHAR(36) NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,name VARCHAR(120) NOT NULL,width INTEGER NOT NULL,height INTEGER NOT NULL,color_mode VARCHAR(8) NOT NULL DEFAULT 'bw',panel_layout VARCHAR(32) NOT NULL DEFAULT 'linear',refresh_seconds INTEGER NOT NULL DEFAULT 900,timezone VARCHAR(64) NOT NULL DEFAULT 'Asia/Shanghai',enabled BOOLEAN NOT NULL DEFAULT 1,current_snapshot_id VARCHAR(36),created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL);
+CREATE TABLE IF NOT EXISTS screens(id VARCHAR(36) PRIMARY KEY,owner_id VARCHAR(36) NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,name VARCHAR(120) NOT NULL,width INTEGER NOT NULL,height INTEGER NOT NULL,color_mode VARCHAR(8) NOT NULL DEFAULT 'bw',panel_layout VARCHAR(32) NOT NULL DEFAULT 'linear',refresh_seconds INTEGER NOT NULL DEFAULT 900,timezone VARCHAR(64) NOT NULL DEFAULT 'Asia/Shanghai',silent_enabled BOOLEAN NOT NULL DEFAULT 0,silent_start VARCHAR(5) NOT NULL DEFAULT '22:00',silent_end VARCHAR(5) NOT NULL DEFAULT '07:00',enabled BOOLEAN NOT NULL DEFAULT 1,current_snapshot_id VARCHAR(36),created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL);
 CREATE TABLE IF NOT EXISTS device_credentials(id VARCHAR(36) PRIMARY KEY,screen_id VARCHAR(36) NOT NULL REFERENCES screens(id) ON DELETE CASCADE,key_prefix VARCHAR(16) NOT NULL,key_hash VARCHAR(64) NOT NULL,created_at DATETIME NOT NULL,revoked_at DATETIME);
 CREATE INDEX IF NOT EXISTS ix_device_credentials_key_prefix ON device_credentials(key_prefix);
 CREATE TABLE IF NOT EXISTS widget_instances(id VARCHAR(36) PRIMARY KEY,screen_id VARCHAR(36) NOT NULL REFERENCES screens(id) ON DELETE CASCADE,widget_type VARCHAR(80) NOT NULL,x INTEGER NOT NULL DEFAULT 0,y INTEGER NOT NULL DEFAULT 0,width INTEGER NOT NULL DEFAULT 240,height INTEGER NOT NULL DEFAULT 120,z_index INTEGER NOT NULL DEFAULT 0,alignment_margin JSON NOT NULL,config JSON NOT NULL,config_version INTEGER NOT NULL DEFAULT 1,created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL);
@@ -87,6 +87,18 @@ export async function bootstrapDatabase(): Promise<void> {
         "UPDATE screens SET panel_layout = 'dual-panel-left-right' WHERE width = 1360 AND height = 480",
       ).run();
     })();
+  }
+  if (!columnNames("screens").has("timezone")) {
+    sqlite.exec("ALTER TABLE screens ADD COLUMN timezone VARCHAR(64) NOT NULL DEFAULT 'Asia/Shanghai'");
+  }
+  if (!columnNames("screens").has("silent_enabled")) {
+    sqlite.exec("ALTER TABLE screens ADD COLUMN silent_enabled BOOLEAN NOT NULL DEFAULT 0");
+  }
+  if (!columnNames("screens").has("silent_start")) {
+    sqlite.exec("ALTER TABLE screens ADD COLUMN silent_start VARCHAR(5) NOT NULL DEFAULT '22:00'");
+  }
+  if (!columnNames("screens").has("silent_end")) {
+    sqlite.exec("ALTER TABLE screens ADD COLUMN silent_end VARCHAR(5) NOT NULL DEFAULT '07:00'");
   }
   sqlite.prepare(
     "UPDATE secrets SET purpose = 'general_key' WHERE purpose NOT IN ('general_key', 'cursor_session', 'qweather_jwt')",
