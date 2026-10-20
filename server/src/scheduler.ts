@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 
 import { db } from "./db/index.js";
-import { screens } from "./db/schema.js";
+import { screens, widgetInstances } from "./db/schema.js";
 import { publishSnapshot } from "./rendering/service.js";
 import { isSilentAt, msUntilNextRender } from "./silent-time.js";
 
@@ -10,14 +10,22 @@ const generations = new Map<string, number>();
 /** Serializes publishes per screen so each caller waits for a snapshot built from the latest DB state. */
 const chains = new Map<string, Promise<string | null>>();
 
-export async function renderScreen(screenId: string, forceMock = false): Promise<string | null> {
+export type RenderOptions = { clockAt?: string };
+
+export function screenHasClock(screenId: string): boolean {
+  return db.select({ widgetType: widgetInstances.widgetType }).from(widgetInstances)
+    .where(eq(widgetInstances.screenId, screenId)).all()
+    .some((row) => row.widgetType === "clock");
+}
+
+export async function renderScreen(
+  screenId: string,
+  forceMock = false,
+  options: RenderOptions = {},
+): Promise<string | null> {
   const previous = chains.get(screenId);
-  const next = previous
-    ? previous.then(
-      () => publishSnapshot(screenId, forceMock),
-      () => publishSnapshot(screenId, forceMock),
-    )
-    : publishSnapshot(screenId, forceMock);
+  const publish = () => publishSnapshot(screenId, forceMock, options);
+  const next = previous ? previous.then(publish, publish) : publish();
   chains.set(screenId, next);
   try {
     return await next;
@@ -46,7 +54,7 @@ export function scheduleScreen(screen: typeof screens.$inferSelect): void {
     if (generations.get(screen.id) !== generation) return;
     const latest = db.select().from(screens).where(eq(screens.id, screen.id)).get();
     if (!latest?.enabled) return;
-    if (!isSilentAt(latest)) await renderScreen(latest.id);
+    if (!isSilentAt(latest) && !screenHasClock(latest.id)) await renderScreen(latest.id);
     if (generations.get(screen.id) !== generation) return;
     const current = db.select().from(screens).where(eq(screens.id, screen.id)).get();
     if (!current?.enabled) return;

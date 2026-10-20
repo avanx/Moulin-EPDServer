@@ -115,6 +115,7 @@ async function widgetHtml(
     sourceOverride?: WidgetSource;
     dataOverride?: unknown;
     ownerId?: string;
+    clockAt?: string;
   } = {},
 ): Promise<{ html: string; mode: "real" | "mock" }> {
   const plugin = registry.get(widget.widgetType);
@@ -136,6 +137,21 @@ async function widgetHtml(
       options: { persist: false, locale: "zh-CN", ...owner },
     });
     mode = "mock";
+  } else if (widget.widgetType === "clock" && options.clockAt) {
+    data = await runDataSource({
+      type: widget.widgetType,
+      manifest: plugin.manifest,
+      source: plugin.dataSource,
+      config: configValue,
+      operation: "adapt",
+      input: { now: options.clockAt },
+      options: {
+        persist: !options.allowMock,
+        locale: "zh-CN",
+        ...(options.strict === undefined ? {} : { strict: options.strict }),
+        ...owner,
+      },
+    });
   } else {
     try {
       data = await runDataSource({
@@ -183,7 +199,7 @@ async function widgetHtml(
 export async function composeScreen(
   screen: Screen,
   widgets: readonly Widget[],
-  options: { forceMock?: boolean; allowMock?: boolean; strict?: boolean; warnings?: string[] } = {},
+  options: { forceMock?: boolean; allowMock?: boolean; strict?: boolean; warnings?: string[]; clockAt?: string } = {},
 ): Promise<{ html: string; modes: string[] }> {
   const rendered = await Promise.all(
     widgets.map((widget) => widgetHtml(widget, { ...options, ownerId: screen.ownerId })),
@@ -269,12 +285,20 @@ export async function renderWidgetPreview(
   });
 }
 
-export async function publishSnapshot(screenId: string, forceMock = false): Promise<string | null> {
+export async function publishSnapshot(
+  screenId: string,
+  forceMock = false,
+  options: { clockAt?: string } = {},
+): Promise<string | null> {
   const screen = db.select().from(screens).where(eq(screens.id, screenId)).get();
   if (!screen || !screen.enabled) return null;
   const widgets = db.select().from(widgetInstances).where(eq(widgetInstances.screenId, screenId)).orderBy(asc(widgetInstances.zIndex)).all();
   const started = performance.now();
-  const { html } = await composeScreen(screen, widgets, { forceMock, allowMock: forceMock });
+  const { html } = await composeScreen(screen, widgets, {
+    forceMock,
+    allowMock: forceMock,
+    ...(options.clockAt ? { clockAt: options.clockAt } : {}),
+  });
   const source = await htmlRenderer.renderPng({ html, width: screen.width, height: screen.height });
   const frame = await prepareFrame(source, screen.colorMode as "bw" | "bwry", screen.panelLayout);
   const frameSha256 = sha256Hex(frame.frame);

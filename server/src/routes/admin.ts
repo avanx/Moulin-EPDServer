@@ -26,7 +26,7 @@ type Account = typeof adminUsers.$inferSelect;
 type Screen = typeof screens.$inferSelect;
 type Widget = typeof widgetInstances.$inferSelect;
 type Json = Record<string, unknown>;
-type ScreenValues = Pick<Screen, "name" | "width" | "height" | "colorMode" | "panelLayout" | "refreshSeconds" | "timezone" | "silentEnabled" | "silentStart" | "silentEnd" | "enabled">;
+type ScreenValues = Pick<Screen, "name" | "width" | "height" | "colorMode" | "panelLayout" | "refreshSeconds" | "panelLatencySeconds" | "timezone" | "silentEnabled" | "silentStart" | "silentEnd" | "enabled">;
 
 const now = (): string => new Date().toISOString();
 const object = (value: unknown): Json => value && typeof value === "object" && !Array.isArray(value) ? value as Json : {};
@@ -130,7 +130,7 @@ function screenJson(row: Screen, owners?: Map<string, string>): Json {
     id: row.id, name: row.name, width: row.width, height: row.height, color_mode: row.colorMode,
     panel_layout: row.panelLayout,
     available_colors: row.colorMode === "bwry" ? ["black", "white", "red", "yellow"] : ["black", "white"],
-    refresh_seconds: row.refreshSeconds, timezone: row.timezone,
+    refresh_seconds: row.refreshSeconds, panel_latency_seconds: row.panelLatencySeconds, timezone: row.timezone,
     silent_enabled: row.silentEnabled, silent_start: row.silentStart, silent_end: row.silentEnd,
     silent_active: isSilentAt(row), enabled: row.enabled,
     owner_id: row.ownerId, owner_username: ownerName(row.ownerId, owners),
@@ -158,12 +158,14 @@ function parseScreen(body: unknown, allowLegacyPanelLayout = false): ScreenValue
       : ""
   ));
   const refreshSeconds = integer(value.refresh_seconds, 900);
+  const panelLatencySeconds = integer(value.panel_latency_seconds, 0);
   const timezone = String(value.timezone ?? "Asia/Shanghai");
   const silentStart = String(value.silent_start ?? "22:00");
   const silentEnd = String(value.silent_end ?? "07:00");
   const silentEnabled = bool(value.silent_enabled, false);
   if (!name || name.length > 120 || width < 16 || width > 4096 || height < 16 || height > 4096 ||
       !["bw", "bwry"].includes(colorMode) || refreshSeconds < 2 || refreshSeconds > 86400 ||
+      panelLatencySeconds < 0 || panelLatencySeconds > 86400 ||
       !["linear", "dual-panel-left-right"].includes(panelLayout) ||
       (panelLayout === "dual-panel-left-right" && width % 2 !== 0) ||
       !isValidTimeZone(timezone) || !isValidClock(silentStart) || !isValidClock(silentEnd) ||
@@ -175,7 +177,7 @@ function parseScreen(body: unknown, allowLegacyPanelLayout = false): ScreenValue
   return {
     name, width, height, colorMode,
     panelLayout: panelLayout as Screen["panelLayout"],
-    refreshSeconds, timezone, silentEnabled, silentStart, silentEnd,
+    refreshSeconds, panelLatencySeconds, timezone, silentEnabled, silentStart, silentEnd,
     enabled: bool(value.enabled, true),
   };
 }

@@ -60,6 +60,7 @@ export const screens = sqliteTable("screens", {
     .notNull()
     .default("linear"),
   refreshSeconds: integer("refresh_seconds").notNull().default(900),
+  panelLatencySeconds: integer("panel_latency_seconds").notNull().default(0),
   timezone: text("timezone", { length: 64 })
     .notNull()
     .default("Asia/Shanghai"),

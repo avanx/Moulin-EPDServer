@@ -152,6 +152,7 @@ function ScreenSettings({ screen }: { screen: Screen }) {
         color_mode: form.get('color_mode'),
         panel_layout: form.get('panel_layout'),
         refresh_seconds: Number(form.get('refresh_seconds')),
+        panel_latency_seconds: Number(form.get('panel_latency_seconds')),
         timezone: String(form.get('timezone') ?? '').trim(),
         silent_enabled: form.get('silent_enabled') === 'on',
         silent_start: String(form.get('silent_start') ?? '').slice(0, 5),
@@ -168,6 +169,7 @@ function ScreenSettings({ screen }: { screen: Screen }) {
     <Field label={t('color')}><select name="color_mode" defaultValue={screen.color_mode}><option value="bw">BW</option><option value="bwry">BWRY</option></select></Field>
     <Field label={t('panelLayout')}><select name="panel_layout" required defaultValue={screen.panel_layout}><option value="linear">{t('panelLayoutLinear')}</option><option value="dual-panel-left-right">{t('panelLayoutDualLeftRight')}</option></select></Field>
     <Field label={t('interval')}><input name="refresh_seconds" type="number" min="2" defaultValue={screen.refresh_seconds} /></Field>
+    <Field label={t('panelLatency')} hint={t('panelLatencyHint')}><input name="panel_latency_seconds" type="number" min="0" max="86400" defaultValue={screen.panel_latency_seconds ?? 0} /></Field>
     <Field label={t('timezone')} hint={t('timezoneHint')}>
       <input name="timezone" list="screen-timezones" defaultValue={screen.timezone || 'Asia/Shanghai'} />
       <datalist id="screen-timezones">

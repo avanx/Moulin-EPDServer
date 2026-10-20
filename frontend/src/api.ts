@@ -24,6 +24,7 @@ export type Screen = {
   panel_layout: PanelLayout
   available_colors: string[]
   refresh_seconds: number
+  panel_latency_seconds: number
   timezone: string
   silent_enabled: boolean
   silent_start: string

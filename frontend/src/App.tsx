@@ -45,8 +45,8 @@ function Button({ children, variant = 'default', ...props }: React.ButtonHTMLAtt
   return <button className={`button ${variant}`} {...props}>{children}</button>
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label className="field"><span>{label}</span>{children}</label>
+function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
+  return <label className="field"><span>{label}</span>{children}{hint && <small className="field-hint">{hint}</small>}</label>
 }
 
 function LoginPage({ onLogin }: { onLogin: (user: AuthUser) => void }) {
@@ -116,7 +116,7 @@ function ScreenForm({ close }: { close: () => void }) {
   })
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); const f = new FormData(event.currentTarget)
-    create.mutate({ name: f.get('name'), width: Number(f.get('width')), height: Number(f.get('height')), color_mode: f.get('color'), panel_layout: f.get('panel_layout'), refresh_seconds: Number(f.get('interval')), enabled: true })
+    create.mutate({ name: f.get('name'), width: Number(f.get('width')), height: Number(f.get('height')), color_mode: f.get('color'), panel_layout: f.get('panel_layout'), refresh_seconds: Number(f.get('interval')), panel_latency_seconds: Number(f.get('panel_latency')), enabled: true })
   }
   return <div className="dialog-backdrop"><form className="card dialog" onSubmit={submit}><h2>{t('createScreen')}</h2>
     <Field label={t('name')}><input name="name" required defaultValue="EPD Display" /></Field>
@@ -124,6 +124,7 @@ function ScreenForm({ close }: { close: () => void }) {
     <Field label={t('color')}><select name="color"><option value="bw">Black / White</option><option value="bwry">Black / White / Red / Yellow</option></select></Field>
     <Field label={t('panelLayout')}><select name="panel_layout" required defaultValue=""><option value="" disabled>{t('selectPanelLayout')}</option><option value="linear">{t('panelLayoutLinear')}</option><option value="dual-panel-left-right">{t('panelLayoutDualLeftRight')}</option></select></Field>
     <Field label={t('interval')}><input name="interval" type="number" min="2" defaultValue="900" /></Field>
+    <Field label={t('panelLatency')} hint={t('panelLatencyHint')}><input name="panel_latency" type="number" min="0" max="86400" defaultValue="0" /></Field>
     {create.error && <p className="error">{String(create.error)}</p>}
     <div className="dialog-actions"><Button type="button" variant="outline" onClick={close}>{t('cancel')}</Button><Button type="submit">{t('save')}</Button></div>
   </form></div>
