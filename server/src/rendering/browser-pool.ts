@@ -4,6 +4,8 @@ import {
   type LaunchOptions,
 } from "playwright";
 
+import { epdFontconfigPath } from "./fontconfig.js";
+
 export interface BrowserPoolOptions {
   readonly maxBrowsers?: number;
   readonly launchOptions?: LaunchOptions;
@@ -33,7 +35,14 @@ export class BrowserPool {
     if (!Number.isInteger(this.#maxBrowsers) || this.#maxBrowsers <= 0) {
       throw new RangeError("maxBrowsers must be a positive integer");
     }
-    this.#launchOptions = options.launchOptions ?? {};
+    const launchOptions = options.launchOptions ?? {};
+    const env: Record<string, string> = {};
+    for (const [key, value] of Object.entries(process.env)) {
+      if (typeof value === "string") env[key] = value;
+    }
+    Object.assign(env, launchOptions.env);
+    env.FONTCONFIG_FILE = epdFontconfigPath();
+    this.#launchOptions = { ...launchOptions, env };
   }
 
   async acquire(): Promise<BrowserLease> {

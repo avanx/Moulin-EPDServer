@@ -56,6 +56,8 @@ RUN set -eux; \
     fi; \
     apt-get update && apt-get install -y --no-install-recommends \
       python3 make g++ \
+      fonts-dejavu-core \
+      fonts-wqy-microhei \
     && npm ci --omit=dev \
     && npx playwright install --with-deps chromium \
     && apt-get purge -y python3 make g++ \
