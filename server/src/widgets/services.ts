@@ -48,6 +48,13 @@ export type ProviderCacheRead =
   | { status: "fresh"; value: unknown }
   | { status: "miss"; stale?: unknown };
 
+/** Secret ids whose Cursor session cookie must not be sent again until the user replaces it. */
+const quarantinedCursorSecrets = new Set<string>();
+
+export function releaseCursorSessionQuarantine(secretId: string): void {
+  quarantinedCursorSecrets.delete(secretId);
+}
+
 function timestamp(date = new Date()): string {
   return date.toISOString();
 }
@@ -147,16 +154,41 @@ export class WidgetServices {
     }
   }
 
-  async getSecret(idOrName: string): Promise<string> {
+  private ownedSecret(idOrName: string) {
     const ownerId = this.options.ownerId;
-    if (!ownerId) throw new Error("Secret lookup requires an owner");
-    const row = db.select().from(secrets)
+    if (!ownerId) return undefined;
+    return db.select().from(secrets)
       .where(and(
         eq(secrets.ownerId, ownerId),
         or(eq(secrets.id, idOrName), eq(secrets.name, idOrName)),
       )).get();
+  }
+
+  async getSecret(idOrName: string): Promise<string> {
+    if (!this.options.ownerId) throw new Error("Secret lookup requires an owner");
+    const row = this.ownedSecret(idOrName);
     if (!row) throw new Error(`Secret is not configured: ${idOrName}`);
     return decryptSecret(row.encryptedValue);
+  }
+
+  /** True when this owner's Cursor session must not be presented to cursor.com. */
+  isCursorSessionQuarantined(idOrName: string): boolean {
+    const row = this.ownedSecret(idOrName);
+    if (!row || row.purpose !== "cursor_session") return false;
+    if (quarantinedCursorSecrets.has(row.id) || row.disabledReason === "token_expired") {
+      quarantinedCursorSecrets.add(row.id);
+      return true;
+    }
+    return false;
+  }
+
+  /** Stop further Cursor requests for this session. The in-memory set is updated before the database write. */
+  quarantineCursorSession(idOrName: string): void {
+    const row = this.ownedSecret(idOrName);
+    if (!row || row.purpose !== "cursor_session") return;
+    quarantinedCursorSecrets.add(row.id);
+    if (row.disabledReason === "token_expired") return;
+    db.update(secrets).set({ disabledReason: "token_expired" }).where(eq(secrets.id, row.id)).run();
   }
 
   async bambuPrinterStatus(options: BambuPrinterStatusOptions): Promise<BambuPrinterStatus> {

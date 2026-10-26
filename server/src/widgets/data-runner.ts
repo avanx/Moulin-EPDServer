@@ -83,13 +83,38 @@ function assertAllowedUrl(input: string, hosts: Set<string>): URL {
   return url;
 }
 
+function cursorSessionSecret(
+  manifest: WidgetManifest,
+  allowedSecret: unknown,
+  init: RequestInit & { secretCookies?: Record<string, string> },
+): string | undefined {
+  if (manifest.externalData?.provider !== "cursor-current-period-usage") return undefined;
+  if (typeof allowedSecret !== "string" || !allowedSecret) return undefined;
+  const token = init.secretCookies?.WorkosCursorSessionToken;
+  if (!token) return undefined;
+  return allowedSecret;
+}
+
+function unauthorizedResult(): { body: string; status: number; statusText: string; headers: Record<string, string> } {
+  return {
+    body: Buffer.from("{}", "utf8").toString("base64"),
+    status: 401,
+    statusText: "Unauthorized",
+    headers: { "content-type": "application/json" },
+  };
+}
+
 async function restrictedRequest(
   services: WidgetServices,
   hosts: Set<string>,
   input: string,
   init: RequestInit & { secretCookies?: Record<string, string> } = {},
+  cursorSecretId?: string,
 ): Promise<{ body: string; status: number; statusText: string; headers: Record<string, string> }> {
   let url = assertAllowedUrl(input, hosts);
+  if (cursorSecretId && services.isCursorSessionQuarantined(cursorSecretId)) {
+    return unauthorizedResult();
+  }
   let response: Response | undefined;
   for (let redirects = 0; redirects <= 5; redirects += 1) {
     response = await services.request(url.href, { ...init, redirect: "manual" });
@@ -99,6 +124,9 @@ async function restrictedRequest(
     url = assertAllowedUrl(new URL(location, url).href, hosts);
   }
   if (!response) throw new Error("Data source request failed");
+  if (cursorSecretId && (response.status === 401 || response.status === 403)) {
+    services.quarantineCursorSession(cursorSecretId);
+  }
   const body = Buffer.from(await response.arrayBuffer());
   if (body.length > RESULT_LIMIT) throw new Error("Data source response exceeds 2 MB");
   return {
@@ -185,11 +213,13 @@ export async function runDataSource(input: DataRunInput): Promise<unknown> {
       if (message?.kind !== "rpc" || typeof message.id !== "string") return;
       const args = Array.isArray(message.args) ? message.args : [];
       if (message.method === "request") {
+        const init = (args[1] ?? {}) as RequestInit & { secretCookies?: Record<string, string> };
         sendResult(child, message.id, () => restrictedRequest(
           services,
           hosts,
           String(args[0] ?? ""),
-          (args[1] ?? {}) as RequestInit & { secretCookies?: Record<string, string> },
+          init,
+          cursorSessionSecret(input.manifest, allowedSecret, init),
         ));
       } else if (message.method === "getSecret") {
         sendResult(child, message.id, async () => {

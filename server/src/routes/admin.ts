@@ -21,6 +21,7 @@ import { renderScreen, scheduleScreen, unscheduleScreen } from "../scheduler.js"
 import { isSilentAt, isValidClock, isValidTimeZone } from "../silent-time.js";
 import { runDataSource } from "../widgets/data-runner.js";
 import { registry } from "../widgets/registry.js";
+import { releaseCursorSessionQuarantine } from "../widgets/services.js";
 
 type Account = typeof adminUsers.$inferSelect;
 type Screen = typeof screens.$inferSelect;
@@ -90,6 +91,17 @@ function providerCacheKey(widget: Widget): string | undefined {
       : undefined;
   }
   return undefined;
+}
+
+function cursorUsageCacheKeys(id: string, name: string): string[] {
+  const refs = new Set([id, name].filter((value) => value.length > 0));
+  return [...refs].map((ref) => `widget:cursor_usage:cursor:current-period:${ref}`);
+}
+
+function deleteCursorUsageCache(id: string, name: string): void {
+  for (const cacheKey of cursorUsageCacheKeys(id, name)) {
+    db.delete(providerStates).where(eq(providerStates.cacheKey, cacheKey)).run();
+  }
 }
 
 function pruneUnreferencedProviderStates(): void {
@@ -827,7 +839,13 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
   app.get(`${prefix}/secrets`, async (request, reply) => {
     const user = await requireUser(request, reply); if (!user) return;
     return db.select().from(secrets).where(eq(secrets.ownerId, user.id)).orderBy(asc(secrets.name)).all()
-      .map((row) => ({ id: row.id, name: row.name, purpose: row.purpose, updated_at: row.updatedAt }));
+      .map((row) => ({
+        id: row.id,
+        name: row.name,
+        purpose: row.purpose,
+        updated_at: row.updatedAt,
+        disabled_reason: row.disabledReason,
+      }));
   });
   app.post(`${prefix}/secrets/qweather/keypair`, async (request, reply) => {
     if (!await requireUser(request, reply)) return;
@@ -859,17 +877,31 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     }
     const owned = and(eq(secrets.ownerId, user.id), eq(secrets.name, name));
     const old = db.select().from(secrets).where(owned).get(), time = now();
-    if (old) db.update(secrets).set({ purpose, encryptedValue: encryptSecret(value), updatedAt: time }).where(eq(secrets.id, old.id)).run();
-    else db.insert(secrets).values({ id: crypto.randomUUID(), ownerId: user.id, name, purpose, encryptedValue: encryptSecret(value), createdAt: time, updatedAt: time }).run();
+    if (old) {
+      db.update(secrets).set({
+        purpose,
+        encryptedValue: encryptSecret(value),
+        disabledReason: null,
+        updatedAt: time,
+      }).where(eq(secrets.id, old.id)).run();
+      releaseCursorSessionQuarantine(old.id);
+      deleteCursorUsageCache(old.id, old.name);
+    } else {
+      db.insert(secrets).values({
+        id: crypto.randomUUID(), ownerId: user.id, name, purpose, encryptedValue: encryptSecret(value), createdAt: time, updatedAt: time,
+      }).run();
+    }
     const row = db.select().from(secrets).where(owned).get()!;
     return { id: row.id, name: row.name, purpose: row.purpose, updated_at: row.updatedAt };
   });
   app.delete(`${prefix}/secrets/:secretId`, async (request, reply) => {
     const user = await requireUser(request, reply); if (!user) return;
     const id = String((request.params as Json).secretId);
-    if (!db.select().from(secrets).where(and(eq(secrets.id, id), eq(secrets.ownerId, user.id))).get()) return fail(reply, 404);
+    const row = db.select().from(secrets).where(and(eq(secrets.id, id), eq(secrets.ownerId, user.id))).get();
+    if (!row) return fail(reply, 404);
     db.delete(secrets).where(eq(secrets.id, id)).run();
-    db.delete(providerStates).where(eq(providerStates.cacheKey, `cursor:current-period:${id}`)).run();
+    releaseCursorSessionQuarantine(row.id);
+    deleteCursorUsageCache(row.id, row.name);
     return reply.code(204).send();
   });
   app.get(`${prefix}/providers/status`, async (request, reply) => {

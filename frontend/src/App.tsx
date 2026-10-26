@@ -190,7 +190,7 @@ function ScreensPage() {
     </article>)}</div>{copiedScreenId && <div className="toast">{t('screenIdCopied')}</div>}{open && <ScreenForm close={() => setOpen(false)} />}</>
 }
 
-type StoredSecret = { id: string; name: string; purpose: string; updated_at: string }
+type StoredSecret = { id: string; name: string; purpose: string; updated_at: string; disabled_reason?: string | null }
 
 function extractCursorSessionToken(input: string) {
   const match = input.match(/\bWorkosCursorSessionToken\s*=\s*([^;\s'"\\]+)/i)
@@ -421,6 +421,7 @@ function SecretsPage() {
           <div className="secret-details">
             <button type="button" className="secret-copy" title={t('copySecretName')} onClick={() => void copySecret(secret.name, t('secretNameCopied'))}><b>{secret.name}</b></button>
             <p>{t(purposeLabelKey(secret.purpose))} · ID: <button type="button" className="secret-copy secret-id" title={t('copySecretId')} onClick={() => void copySecret(secret.id, t('secretIdCopied'))}>{secret.id}</button> · {new Date(secret.updated_at).toLocaleString()}</p>
+            {secret.disabled_reason === 'token_expired' && <p className="error">{t('cursorSessionExpired')}</p>}
           </div>
           <div className="secret-actions">
             {secret.purpose === 'qweather_jwt' && <Button type="button" variant="outline" onClick={() => setPublicKeySecret(secret)}><KeyRound size={15} />{t('viewPublicKey')}</Button>}

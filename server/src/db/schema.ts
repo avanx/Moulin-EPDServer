@@ -157,6 +157,8 @@ export const secrets = sqliteTable(
     name: text("name", { length: 120 }).notNull(),
     purpose: text("purpose", { length: 80 }).notNull(),
     encryptedValue: text("encrypted_value").notNull(),
+    /** Set when a provider rejects the credential, so later refreshes do not retry it. */
+    disabledReason: text("disabled_reason"),
     ...timestampColumns,
   },
   (table) => [

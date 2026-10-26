@@ -16,7 +16,7 @@ CREATE INDEX IF NOT EXISTS ix_device_credentials_key_prefix ON device_credential
 CREATE TABLE IF NOT EXISTS widget_instances(id VARCHAR(36) PRIMARY KEY,screen_id VARCHAR(36) NOT NULL REFERENCES screens(id) ON DELETE CASCADE,widget_type VARCHAR(80) NOT NULL,x INTEGER NOT NULL DEFAULT 0,y INTEGER NOT NULL DEFAULT 0,width INTEGER NOT NULL DEFAULT 240,height INTEGER NOT NULL DEFAULT 120,z_index INTEGER NOT NULL DEFAULT 0,alignment_margin JSON NOT NULL,config JSON NOT NULL,config_version INTEGER NOT NULL DEFAULT 1,created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL);
 CREATE TABLE IF NOT EXISTS plugin_packages(type_name VARCHAR(80) PRIMARY KEY,package_name VARCHAR(160) NOT NULL,version VARCHAR(80) NOT NULL DEFAULT 'unknown',source_type VARCHAR(24) NOT NULL,source_url TEXT,source_ref VARCHAR(160),status VARCHAR(24) NOT NULL,load_error TEXT,plugin_metadata JSON NOT NULL,created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL);
 CREATE TABLE IF NOT EXISTS screen_plugins(screen_id VARCHAR(36) NOT NULL REFERENCES screens(id) ON DELETE CASCADE,plugin_type VARCHAR(80) NOT NULL REFERENCES plugin_packages(type_name) ON DELETE CASCADE,enabled BOOLEAN NOT NULL DEFAULT 1,created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL,PRIMARY KEY(screen_id,plugin_type));
-CREATE TABLE IF NOT EXISTS secrets(id VARCHAR(36) PRIMARY KEY,owner_id VARCHAR(36) NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,name VARCHAR(120) NOT NULL,purpose VARCHAR(80) NOT NULL,encrypted_value TEXT NOT NULL,created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL);
+CREATE TABLE IF NOT EXISTS secrets(id VARCHAR(36) PRIMARY KEY,owner_id VARCHAR(36) NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,name VARCHAR(120) NOT NULL,purpose VARCHAR(80) NOT NULL,encrypted_value TEXT NOT NULL,disabled_reason TEXT,created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL);
 CREATE TABLE IF NOT EXISTS snapshots(id VARCHAR(36) PRIMARY KEY,screen_id VARCHAR(36) NOT NULL REFERENCES screens(id) ON DELETE CASCADE,base_snapshot_id VARCHAR(36),encoding VARCHAR(40) NOT NULL,width INTEGER NOT NULL,height INTEGER NOT NULL,sha256 VARCHAR(64) NOT NULL,byte_size INTEGER NOT NULL,frame_path TEXT NOT NULL,source_path TEXT NOT NULL,preview_path TEXT NOT NULL,created_at DATETIME NOT NULL);
 CREATE TABLE IF NOT EXISTS snapshot_regions(id VARCHAR(36) PRIMARY KEY,snapshot_id VARCHAR(36) NOT NULL REFERENCES snapshots(id) ON DELETE CASCADE,x INTEGER NOT NULL,y INTEGER NOT NULL,width INTEGER NOT NULL,height INTEGER NOT NULL,stride INTEGER NOT NULL,sha256 VARCHAR(64) NOT NULL,byte_size INTEGER NOT NULL,path TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS provider_states(id VARCHAR(36) PRIMARY KEY,cache_key VARCHAR(180) NOT NULL UNIQUE,payload JSON NOT NULL,last_error TEXT,last_success_at DATETIME,expires_at DATETIME,stale_until DATETIME);
@@ -106,6 +106,9 @@ export async function bootstrapDatabase(): Promise<void> {
   sqlite.prepare(
     "UPDATE secrets SET purpose = 'general_key' WHERE purpose NOT IN ('general_key', 'cursor_session', 'qweather_jwt')",
   ).run();
+  if (!columnNames("secrets").has("disabled_reason")) {
+    sqlite.exec("ALTER TABLE secrets ADD COLUMN disabled_reason TEXT");
+  }
   sqlite.prepare(
     "UPDATE snapshots SET encoding = 'edp-bwry-v1' WHERE encoding = 'image2lcd-bwry-v1'",
   ).run();
