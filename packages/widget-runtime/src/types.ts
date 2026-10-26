@@ -87,11 +87,23 @@ export interface KlipperPrinterStatus {
   taskName: string;
 }
 
+export interface ClaudeCodeUsageOptions {
+  secretId: string;
+}
+
+export interface ClaudeCodeUsage {
+  fiveHourPercent: number;
+  sevenDayPercent: number;
+  fiveHourResetsAt: string | null;
+  sevenDayResetsAt: string | null;
+}
+
 export interface WidgetDataServices {
   request(input: string, init?: WidgetRequestInit): Promise<Response>;
   getSecret(idOrName: string): Promise<string>;
   bambuPrinterStatus(options: BambuPrinterStatusOptions): Promise<BambuPrinterStatus>;
   klipperPrinterStatus(options: KlipperPrinterStatusOptions): Promise<KlipperPrinterStatus>;
+  claudeCodeUsage(options: ClaudeCodeUsageOptions): Promise<ClaudeCodeUsage>;
   cachedProvider<T>(
     key: string,
     options: { ttlSeconds: number; staleSeconds?: number },

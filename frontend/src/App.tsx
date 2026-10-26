@@ -201,7 +201,17 @@ function extractCursorSessionToken(input: string) {
 function purposeLabelKey(purpose: string): string {
   if (purpose === 'cursor_session') return 'purposeCursorSession'
   if (purpose === 'qweather_jwt') return 'purposeQweatherJwt'
+  if (purpose === 'claude_oauth') return 'purposeClaudeOauth'
   return 'purposeGeneralKey'
+}
+
+const defaultSecretNames = new Set(['general-key', 'cursor-session', 'qweather-ed25519', 'claude-oauth'])
+
+function defaultSecretName(purpose: string): string {
+  if (purpose === 'qweather_jwt') return 'qweather-ed25519'
+  if (purpose === 'cursor_session') return 'cursor-session'
+  if (purpose === 'claude_oauth') return 'claude-oauth'
+  return 'general-key'
 }
 
 function CurlTokenImport({ onToken }: { onToken: (token: string) => void }) {
@@ -278,6 +288,81 @@ function QWeatherKeyPairPanel({
   </div>
 }
 
+function ClaudeOAuthPanel({ onCredentials }: { onCredentials: (value: string) => void }) {
+  const { t } = useTranslation()
+  const [authorizationUrl, setAuthorizationUrl] = useState('')
+  const [state, setAuthState] = useState('')
+  const [callbackUrl, setCallbackUrl] = useState('')
+  const [error, setError] = useState('')
+  const [ready, setReady] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const authorize = useMutation({
+    mutationFn: () => api<{ authorizationUrl: string; state: string }>('/api/v1/admin/secrets/claude/authorize', { method: 'POST' }),
+    onSuccess: (data) => {
+      setError('')
+      setReady(false)
+      setCopied(false)
+      setCallbackUrl('')
+      setAuthorizationUrl(data.authorizationUrl)
+      setAuthState(data.state)
+    },
+    onError: (reason) => setError(String(reason)),
+  })
+  const exchange = useMutation({
+    mutationFn: () => api<{ value: string }>('/api/v1/admin/secrets/claude/token', {
+      method: 'POST',
+      body: JSON.stringify({ callbackUrl, state }),
+    }),
+    onSuccess: (data) => {
+      setError('')
+      setReady(true)
+      onCredentials(data.value)
+    },
+    onError: (reason) => {
+      setReady(false)
+      setError(String(reason))
+    },
+  })
+
+  return <div className="curl-import">
+    <p className="muted">{t('claudeOAuthHint')}</p>
+    <Button type="button" variant="outline" disabled={authorize.isPending} onClick={() => authorize.mutate()}>
+      <KeyRound size={16} />{authorize.isPending ? t('claudeStartingAuth') : t('claudeStartAuth')}
+    </Button>
+    {authorizationUrl && <>
+      <Field label={t('claudeAuthUrl')}>
+        <textarea rows={4} readOnly value={authorizationUrl} spellCheck={false} />
+      </Field>
+      <Button type="button" variant="outline" onClick={async () => {
+        try {
+          await copyText(authorizationUrl)
+          setCopied(true)
+          window.setTimeout(() => setCopied(false), 2000)
+        } catch {
+          setCopied(false)
+        }
+      }}><Copy size={16} />{copied ? t('claudeAuthUrlCopied') : t('claudeCopyAuthUrl')}</Button>
+      <Button type="button" variant="outline" onClick={() => window.open(authorizationUrl, '_blank', 'noopener,noreferrer')}>
+        {t('claudeOpenAuth')}
+      </Button>
+      <Field label={t('claudeCallbackLabel')}>
+        <textarea
+          rows={3}
+          value={callbackUrl}
+          onChange={event => setCallbackUrl(event.target.value)}
+          placeholder={t('claudeCallbackPlaceholder')}
+          spellCheck={false}
+        />
+      </Field>
+      <Button type="button" variant="outline" disabled={!callbackUrl.trim() || !state || exchange.isPending} onClick={() => exchange.mutate()}>
+        {exchange.isPending ? t('claudeExchanging') : t('claudeExchange')}
+      </Button>
+    </>}
+    {ready && <small className="success">{t('claudeCredentialsReady')}</small>}
+    {error && <p className="error">{error}</p>}
+  </div>
+}
+
 function QWeatherPublicKeyDialog({ secret, close }: { secret: StoredSecret; close: () => void }) {
   const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
@@ -339,6 +424,7 @@ function SecretUpdateDialog({ secret, close }: { secret: StoredSecret; close: ()
     <p className="muted">{secret.name}</p>
     {secret.purpose === 'cursor_session' && <CurlTokenImport onToken={setValue} />}
     {secret.purpose === 'qweather_jwt' && <QWeatherKeyPairPanel onPrivateKey={setValue} publicKey={publicKey} onPublicKey={setPublicKey} />}
+    {secret.purpose === 'claude_oauth' && <ClaudeOAuthPanel onCredentials={setValue} />}
     <Field label={t('newSecretValue')}><textarea name="value" rows={7} autoFocus required value={value} onChange={event => setValue(event.target.value)} placeholder={t('pasteNewSecret')} /></Field>
     {update.error && <p className="error">{String(update.error)}</p>}
     <div className="dialog-actions"><Button type="button" variant="outline" onClick={close}>{t('cancel')}</Button><Button type="submit" disabled={update.isPending}><Save size={16} />{update.isPending ? t('updating') : t('update')}</Button></div>
@@ -371,9 +457,7 @@ function SecretsPage() {
     setSecretValue('')
     setPublicKey('')
     setImportReset(value => value + 1)
-    if (next === 'qweather_jwt' && (name === 'general-key' || name === 'cursor-session')) setName('qweather-ed25519')
-    else if (next === 'cursor_session' && (name === 'general-key' || name === 'qweather-ed25519')) setName('cursor-session')
-    else if (next === 'general_key' && (name === 'cursor-session' || name === 'qweather-ed25519')) setName('general-key')
+    if (defaultSecretNames.has(name)) setName(defaultSecretName(next))
   }
   async function copySecret(value: string, message: string) {
     try {
@@ -405,10 +489,12 @@ function SecretsPage() {
             <option value="general_key">{t('purposeGeneralKey')}</option>
             <option value="cursor_session">{t('purposeCursorSession')}</option>
             <option value="qweather_jwt">{t('purposeQweatherJwt')}</option>
+            <option value="claude_oauth">{t('purposeClaudeOauth')}</option>
           </select>
         </Field>
         {purpose === 'cursor_session' && <CurlTokenImport key={importReset} onToken={setSecretValue} />}
         {purpose === 'qweather_jwt' && <QWeatherKeyPairPanel key={importReset} onPrivateKey={setSecretValue} publicKey={publicKey} onPublicKey={setPublicKey} />}
+        {purpose === 'claude_oauth' && <ClaudeOAuthPanel key={importReset} onCredentials={setSecretValue} />}
         <Field label={t('secretValue')}>
           <textarea name="value" rows={5} required value={secretValue} onChange={event => setSecretValue(event.target.value)} spellCheck={false} />
         </Field>
@@ -421,7 +507,7 @@ function SecretsPage() {
           <div className="secret-details">
             <button type="button" className="secret-copy" title={t('copySecretName')} onClick={() => void copySecret(secret.name, t('secretNameCopied'))}><b>{secret.name}</b></button>
             <p>{t(purposeLabelKey(secret.purpose))} · ID: <button type="button" className="secret-copy secret-id" title={t('copySecretId')} onClick={() => void copySecret(secret.id, t('secretIdCopied'))}>{secret.id}</button> · {new Date(secret.updated_at).toLocaleString()}</p>
-            {secret.disabled_reason === 'token_expired' && <p className="error">{t('cursorSessionExpired')}</p>}
+            {secret.disabled_reason === 'token_expired' && <p className="error">{t(secret.purpose === 'claude_oauth' ? 'claudeSessionExpired' : 'cursorSessionExpired')}</p>}
           </div>
           <div className="secret-actions">
             {secret.purpose === 'qweather_jwt' && <Button type="button" variant="outline" onClick={() => setPublicKeySecret(secret)}><KeyRound size={15} />{t('viewPublicKey')}</Button>}

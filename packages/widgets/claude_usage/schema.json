@@ -1,0 +1,36 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": [
+        "secret_id"
+    ],
+    "additionalProperties": false,
+    "properties": {
+        "style_id": {
+            "type": "string",
+            "enum": [
+                "default",
+                "compact"
+            ],
+            "default": "default"
+        },
+        "secret_id": {
+            "type": "string",
+            "description": "encrypted Claude OAuth credential secret id or name"
+        },
+        "title": {
+            "type": "string",
+            "default": "Claude Usage"
+        },
+        "show_border": {
+            "type": "boolean",
+            "default": true
+        },
+        "cache_minutes": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 120,
+            "default": 15
+        }
+    }
+}

@@ -10,7 +10,7 @@
 - **服务端渲染**：HTML / CSS / SVG 组件 → Playwright 出图 → 墨水屏编码
 - **色彩模式**：黑白（`epd-bw-msb-v1`）与黑白红黄（`edp-bwry-v1`），含双面板布局
 - **增量刷新**：不可变快照 + 黑白局部更新，减少全屏刷写
-- **内置组件**：时钟、天气（Open-Meteo / 和风天气）、文本、矩形、Cursor 用量、Bambu / Klipper 打印状态等
+- **内置组件**：时钟、天气（Open-Meteo / 和风天气）、文本、矩形、Cursor / Claude Code 用量、Bambu / Klipper 打印状态等
 - **无硬件调试**：浏览器内设备模拟器，无需真机即可预览
 - **密钥管理**：第三方 Token 经 `EPD_MASTER_KEY` 加密入库，组件侧只引用 Secret ID
 
@@ -42,6 +42,7 @@
 | [`text`](packages/widgets/text/) | 自定义文本 | 填写文本、字号与对齐；样式含 `default` / `boxed` |
 | [`rectangle`](packages/widgets/rectangle/) | 矩形 / 线段装饰 | 配置填充、描边与圆角；宽或高为 1px 时退化为线段 |
 | [`cursor_usage`](packages/widgets/cursor_usage/) | Cursor 用量 | 见 [使用说明](packages/widgets/cursor_usage/README.md) |
+| [`claude_usage`](packages/widgets/claude_usage/) | Claude Code 用量 | 见 [使用说明](packages/widgets/claude_usage/README.md) |
 | [`bambu_print`](packages/widgets/bambu_print/) | 拓竹打印进度 | 见 [使用说明](packages/widgets/bambu_print/README.md) |
 | [`klipper_print`](packages/widgets/klipper_print/) | Klipper / Snapmaker 打印进度 | 见下方简要说明 |
 

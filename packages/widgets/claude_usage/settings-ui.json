@@ -1,0 +1,80 @@
+{
+    "sections": [
+        {
+            "title": {
+                "zh-CN": "账户",
+                "en": "Account"
+            },
+            "description": {
+                "zh-CN": "在密钥管理中选择用途「Claude Code」，完成授权后保存。不要使用本机 Claude Code 的 refresh token。",
+                "en": "In Secrets, choose purpose Claude Code, finish authorization, and save. Do not reuse the refresh token from a local Claude Code install."
+            },
+            "fields": [
+                "secret_id"
+            ]
+        },
+        {
+            "title": {
+                "zh-CN": "卡片显示",
+                "en": "Card display"
+            },
+            "fields": [
+                "title",
+                "show_border",
+                "cache_minutes"
+            ]
+        }
+    ],
+    "fields": {
+        "secret_id": {
+            "control": "text",
+            "label": {
+                "zh-CN": "密钥 ID 或名称",
+                "en": "Secret ID or name"
+            },
+            "placeholder": {
+                "zh-CN": "例如 claude-oauth",
+                "en": "For example, claude-oauth"
+            },
+            "help": {
+                "zh-CN": "填写密钥管理中显示的 ID 或名称，不要在这里填写 Token；详细步骤见 claude_usage/README.md",
+                "en": "Enter the ID or name shown in Secrets, not the token itself. See claude_usage/README.md for detailed steps."
+            }
+        },
+        "title": {
+            "control": "text",
+            "label": {
+                "zh-CN": "卡片标题",
+                "en": "Card title"
+            }
+        },
+        "show_border": {
+            "control": "toggle",
+            "label": {
+                "zh-CN": "显示外框（紧凑数字）",
+                "en": "Show outer border (compact style)"
+            }
+        },
+        "cache_minutes": {
+            "control": "range",
+            "label": {
+                "zh-CN": "更新间隔",
+                "en": "Refresh interval"
+            },
+            "min": 5,
+            "max": 120,
+            "step": 5,
+            "suffix": {
+                "zh-CN": " 分钟",
+                "en": " min"
+            }
+        }
+    },
+    "style": {
+        "accent": "#c2410c",
+        "surface": "#fff7ed",
+        "border": "#fed7aa",
+        "label": "#7c2d12",
+        "radius": 10
+    }
+}

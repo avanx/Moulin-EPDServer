@@ -1,0 +1,15 @@
+{
+    "id": "compact",
+    "title": {
+        "zh-CN": "紧凑数字",
+        "en": "Compact numbers"
+    },
+    "defaultSize": {
+        "width": 300,
+        "height": 120
+    },
+    "requiredColors": [
+        "black",
+        "white"
+    ]
+}

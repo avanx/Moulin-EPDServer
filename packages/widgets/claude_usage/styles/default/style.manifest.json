@@ -1,0 +1,15 @@
+{
+    "id": "default",
+    "title": {
+        "zh-CN": "进度卡片",
+        "en": "Progress card"
+    },
+    "defaultSize": {
+        "width": 420,
+        "height": 210
+    },
+    "requiredColors": [
+        "black",
+        "white"
+    ]
+}

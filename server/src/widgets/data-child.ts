@@ -1,7 +1,7 @@
 type RpcRequest = {
   kind: "rpc";
   id: string;
-  method: "request" | "getSecret" | "bambuPrinterStatus" | "klipperPrinterStatus" | "cacheRead" | "cacheSuccess" | "cacheFailure";
+  method: "request" | "getSecret" | "bambuPrinterStatus" | "klipperPrinterStatus" | "claudeCodeUsage" | "cacheRead" | "cacheSuccess" | "cacheFailure";
   args: unknown[];
 };
 
@@ -105,6 +105,14 @@ async function execute(message: RunRequest): Promise<void> {
           currentLayer: number;
           totalLayers: number;
           taskName: string;
+        };
+      },
+      async claudeCodeUsage(options: { secretId: string }) {
+        return await rpc("claudeCodeUsage", options) as {
+          fiveHourPercent: number;
+          sevenDayPercent: number;
+          fiveHourResetsAt: string | null;
+          sevenDayResetsAt: string | null;
         };
       },
       async cachedProvider<T>(

@@ -1,0 +1,36 @@
+.usage {
+    height: 100%;
+    padding: 8px 10px;
+    display: grid;
+    grid-template: 25px 1fr/1fr 1fr
+}
+
+.config-show-border .usage {
+    border: 2px solid;
+    border-radius: 10px
+}
+
+.usage header {
+    grid-column: 1/3;
+    font-weight: 700
+}
+
+.usage div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-right: 1px solid
+}
+
+.usage div:last-child {
+    border: 0
+}
+
+.usage strong {
+    font-size: clamp(24px, 33vh, 46px);
+    line-height: 1.1
+}
+
+.usage small {
+    font-size: 14px
+}

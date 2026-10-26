@@ -1,0 +1,38 @@
+{
+    "type": "claude_usage",
+    "title": {
+        "zh-CN": "Claude Code 用量",
+        "en": "Claude Code usage"
+    },
+    "description": {
+        "zh-CN": "显示 Claude Code 的 5 小时与 7 天用量",
+        "en": "Display Claude Code 5-hour and 7-day usage"
+    },
+    "version": "1.0.0",
+    "defaultStyle": "default",
+    "supportsMock": true,
+    "mockConfig": {
+        "style_id": "default",
+        "secret_id": "mock",
+        "title": "Claude Usage",
+        "show_border": true,
+        "cache_minutes": 15
+    },
+    "mockData": {
+        "fiveHourPercent": 42,
+        "sevenDayPercent": 18,
+        "fiveHourResetsAt": "2026-10-26T10:00:00.000Z",
+        "sevenDayResetsAt": "2026-11-01T10:00:00.000Z",
+        "_mock": true
+    },
+    "externalData": {
+        "provider": "claude-oauth-usage",
+        "cacheSeconds": 900,
+        "staleSeconds": 86400,
+        "secretConfigField": "secret_id",
+        "description": {
+            "zh-CN": "使用 Claude OAuth 凭据请求 5 小时与 7 天用量",
+            "en": "Uses Claude OAuth credentials for 5-hour and 7-day usage"
+        }
+    }
+}

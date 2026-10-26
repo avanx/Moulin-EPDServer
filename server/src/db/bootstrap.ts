@@ -104,7 +104,7 @@ export async function bootstrapDatabase(): Promise<void> {
     sqlite.exec("ALTER TABLE screens ADD COLUMN panel_latency_seconds INTEGER NOT NULL DEFAULT 0");
   }
   sqlite.prepare(
-    "UPDATE secrets SET purpose = 'general_key' WHERE purpose NOT IN ('general_key', 'cursor_session', 'qweather_jwt')",
+    "UPDATE secrets SET purpose = 'general_key' WHERE purpose NOT IN ('general_key', 'cursor_session', 'qweather_jwt', 'claude_oauth')",
   ).run();
   if (!columnNames("secrets").has("disabled_reason")) {
     sqlite.exec("ALTER TABLE secrets ADD COLUMN disabled_reason TEXT");

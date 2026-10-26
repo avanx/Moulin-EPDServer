@@ -4,7 +4,16 @@ import { connectAsync } from "mqtt";
 
 import { db } from "../db/index.js";
 import { providerStates, secrets } from "../db/schema.js";
-import { databaseTimestampMillis, decryptSecret } from "../security.js";
+import {
+  ClaudeAuthError,
+  claudeTokenNeedsRefresh,
+  fetchClaudeUsage,
+  parseClaudeOAuthCredentials,
+  refreshClaudeAccessToken,
+  serializeClaudeOAuthCredentials,
+  type ClaudeCodeUsage,
+} from "../claude-oauth.js";
+import { databaseTimestampMillis, decryptSecret, encryptSecret } from "../security.js";
 
 interface BambuPrinterStatusOptions {
   host: string;
@@ -50,9 +59,34 @@ export type ProviderCacheRead =
 
 /** Secret ids whose Cursor session cookie must not be sent again until the user replaces it. */
 const quarantinedCursorSecrets = new Set<string>();
+/** Secret ids whose Claude OAuth grant must not be refreshed again until the user replaces it. */
+const quarantinedClaudeSecrets = new Set<string>();
+const claudeSecretLocks = new Map<string, Promise<void>>();
 
 export function releaseCursorSessionQuarantine(secretId: string): void {
   quarantinedCursorSecrets.delete(secretId);
+}
+
+export function releaseClaudeSessionQuarantine(secretId: string): void {
+  quarantinedClaudeSecrets.delete(secretId);
+}
+
+function withClaudeSecretLock<T>(secretId: string, action: () => Promise<T>): Promise<T> {
+  const previous = claudeSecretLocks.get(secretId) ?? Promise.resolve();
+  let release: () => void = () => undefined;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const tail = previous.then(() => gate, () => gate);
+  claudeSecretLocks.set(secretId, tail);
+  return previous.catch(() => undefined).then(async () => {
+    try {
+      return await action();
+    } finally {
+      release();
+      if (claudeSecretLocks.get(secretId) === tail) claudeSecretLocks.delete(secretId);
+    }
+  });
 }
 
 function timestamp(date = new Date()): string {
@@ -189,6 +223,62 @@ export class WidgetServices {
     quarantinedCursorSecrets.add(row.id);
     if (row.disabledReason === "token_expired") return;
     db.update(secrets).set({ disabledReason: "token_expired" }).where(eq(secrets.id, row.id)).run();
+  }
+
+  /** True when this owner's Claude grant must not be presented to Anthropic. */
+  isClaudeSessionQuarantined(idOrName: string): boolean {
+    const row = this.ownedSecret(idOrName);
+    if (!row || row.purpose !== "claude_oauth") return false;
+    if (quarantinedClaudeSecrets.has(row.id) || row.disabledReason === "token_expired") {
+      quarantinedClaudeSecrets.add(row.id);
+      return true;
+    }
+    return false;
+  }
+
+  /** Stop further Claude token refreshes for this secret. The in-memory set is updated before the database write. */
+  quarantineClaudeSession(idOrName: string): void {
+    const row = this.ownedSecret(idOrName);
+    if (!row || row.purpose !== "claude_oauth") return;
+    quarantinedClaudeSecrets.add(row.id);
+    if (row.disabledReason === "token_expired") return;
+    db.update(secrets).set({ disabledReason: "token_expired" }).where(eq(secrets.id, row.id)).run();
+  }
+
+  async claudeCodeUsage(options: { secretId: string }): Promise<ClaudeCodeUsage> {
+    const secretId = options.secretId.trim();
+    if (!secretId) throw new Error("Claude secret is not configured");
+    return withClaudeSecretLock(secretId, async () => {
+      if (this.isClaudeSessionQuarantined(secretId)) throw new Error("TOKEN_EXPIRED");
+      const row = this.ownedSecret(secretId);
+      if (!row || row.purpose !== "claude_oauth") throw new Error("Claude secret is not configured");
+      let credentials = parseClaudeOAuthCredentials(decryptSecret(row.encryptedValue));
+      if (claudeTokenNeedsRefresh(credentials)) {
+        try {
+          credentials = await refreshClaudeAccessToken(credentials);
+        } catch (error) {
+          if (error instanceof ClaudeAuthError) {
+            this.quarantineClaudeSession(secretId);
+            throw new Error("TOKEN_EXPIRED");
+          }
+          throw error;
+        }
+        db.update(secrets).set({
+          encryptedValue: encryptSecret(serializeClaudeOAuthCredentials(credentials)),
+          disabledReason: null,
+          updatedAt: timestamp(),
+        }).where(eq(secrets.id, row.id)).run();
+      }
+      try {
+        return await fetchClaudeUsage(credentials.accessToken);
+      } catch (error) {
+        if (error instanceof ClaudeAuthError) {
+          this.quarantineClaudeSession(secretId);
+          throw new Error("TOKEN_EXPIRED");
+        }
+        throw error;
+      }
+    });
   }
 
   async bambuPrinterStatus(options: BambuPrinterStatusOptions): Promise<BambuPrinterStatus> {

@@ -267,6 +267,18 @@ export async function runDataSource(input: DataRunInput): Promise<unknown> {
             ...(apiSecretId ? { apiSecretId } : {}),
           });
         });
+      } else if (message.method === "claudeCodeUsage") {
+        sendResult(child, message.id, async () => {
+          if (input.manifest.externalData?.provider !== "claude-oauth-usage") {
+            throw new Error("Data source is not allowed to access Claude usage");
+          }
+          const options = (args[0] ?? {}) as Record<string, unknown>;
+          const secretId = String(options.secretId ?? "");
+          if (typeof allowedSecret !== "string" || secretId !== allowedSecret) {
+            throw new Error("Data source is not allowed to access this secret");
+          }
+          return services.claudeCodeUsage({ secretId });
+        });
       } else if (message.method === "cacheRead") {
         sendResult(child, message.id, () => services.readProviderCache(`widget:${input.type}:${String(args[0])}`));
       } else if (message.method === "cacheSuccess") {

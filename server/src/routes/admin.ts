@@ -21,7 +21,8 @@ import { renderScreen, scheduleScreen, unscheduleScreen } from "../scheduler.js"
 import { isSilentAt, isValidClock, isValidTimeZone } from "../silent-time.js";
 import { runDataSource } from "../widgets/data-runner.js";
 import { registry } from "../widgets/registry.js";
-import { releaseCursorSessionQuarantine } from "../widgets/services.js";
+import { createClaudeAuthorization, exchangeClaudeAuthorization, parseClaudeOAuthCredentials } from "../claude-oauth.js";
+import { releaseClaudeSessionQuarantine, releaseCursorSessionQuarantine } from "../widgets/services.js";
 
 type Account = typeof adminUsers.$inferSelect;
 type Screen = typeof screens.$inferSelect;
@@ -46,8 +47,8 @@ function pluginSupportsColorMode(type: string, colorMode: string): boolean {
   }
 }
 
-const knownProviderTypes = new Set(["cursor_usage", "weather", "weather-qweather", "bambu_print", "klipper_print"]);
-const secretPurposes = new Set(["general_key", "cursor_session", "qweather_jwt"]);
+const knownProviderTypes = new Set(["cursor_usage", "claude_usage", "weather", "weather-qweather", "bambu_print", "klipper_print"]);
+const secretPurposes = new Set(["general_key", "cursor_session", "qweather_jwt", "claude_oauth"]);
 
 function providerCacheKey(widget: Widget): string | undefined {
   const value = widget.config;
@@ -90,6 +91,10 @@ function providerCacheKey(widget: Widget): string | undefined {
       ? `widget:klipper_print:klipper:${compatibility}:${host}:${port}:${secretId}`
       : undefined;
   }
+  if (widget.widgetType === "claude_usage") {
+    const secretId = String(value.secret_id ?? "");
+    return secretId ? `widget:claude_usage:claude:usage:${secretId}` : undefined;
+  }
   return undefined;
 }
 
@@ -102,6 +107,24 @@ function deleteCursorUsageCache(id: string, name: string): void {
   for (const cacheKey of cursorUsageCacheKeys(id, name)) {
     db.delete(providerStates).where(eq(providerStates.cacheKey, cacheKey)).run();
   }
+}
+
+function claudeUsageCacheKeys(id: string, name: string): string[] {
+  const refs = new Set([id, name].filter((value) => value.length > 0));
+  return [...refs].map((ref) => `widget:claude_usage:claude:usage:${ref}`);
+}
+
+function deleteClaudeUsageCache(id: string, name: string): void {
+  for (const cacheKey of claudeUsageCacheKeys(id, name)) {
+    db.delete(providerStates).where(eq(providerStates.cacheKey, cacheKey)).run();
+  }
+}
+
+function releaseSecretProviderState(id: string, name: string): void {
+  releaseCursorSessionQuarantine(id);
+  releaseClaudeSessionQuarantine(id);
+  deleteCursorUsageCache(id, name);
+  deleteClaudeUsageCache(id, name);
 }
 
 function pruneUnreferencedProviderStates(): void {
@@ -851,6 +874,22 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     if (!await requireUser(request, reply)) return;
     return generateEd25519KeyPairPem();
   });
+  app.post(`${prefix}/secrets/claude/authorize`, async (request, reply) => {
+    if (!await requireUser(request, reply)) return;
+    return createClaudeAuthorization();
+  });
+  app.post(`${prefix}/secrets/claude/token`, async (request, reply) => {
+    if (!await requireUser(request, reply)) return;
+    const body = object(request.body);
+    const callbackUrl = String(body.callbackUrl ?? "");
+    const state = String(body.state ?? "");
+    if (!callbackUrl || !state) return fail(reply, 422, "Callback URL and state are required");
+    try {
+      return { value: await exchangeClaudeAuthorization(callbackUrl, state) };
+    } catch (error) {
+      return fail(reply, 422, error instanceof Error ? error.message : "Claude authorization failed");
+    }
+  });
   app.get(`${prefix}/secrets/:secretId/public-key`, async (request, reply) => {
     const user = await requireUser(request, reply); if (!user) return;
     const id = String((request.params as Json).secretId);
@@ -875,6 +914,13 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
         return fail(reply, 422, error instanceof Error ? error.message : "Invalid Ed25519 private key PEM");
       }
     }
+    if (purpose === "claude_oauth") {
+      try {
+        parseClaudeOAuthCredentials(value);
+      } catch (error) {
+        return fail(reply, 422, error instanceof Error ? error.message : "Invalid Claude credentials");
+      }
+    }
     const owned = and(eq(secrets.ownerId, user.id), eq(secrets.name, name));
     const old = db.select().from(secrets).where(owned).get(), time = now();
     if (old) {
@@ -884,8 +930,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
         disabledReason: null,
         updatedAt: time,
       }).where(eq(secrets.id, old.id)).run();
-      releaseCursorSessionQuarantine(old.id);
-      deleteCursorUsageCache(old.id, old.name);
+      releaseSecretProviderState(old.id, old.name);
     } else {
       db.insert(secrets).values({
         id: crypto.randomUUID(), ownerId: user.id, name, purpose, encryptedValue: encryptSecret(value), createdAt: time, updatedAt: time,
@@ -900,8 +945,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     const row = db.select().from(secrets).where(and(eq(secrets.id, id), eq(secrets.ownerId, user.id))).get();
     if (!row) return fail(reply, 404);
     db.delete(secrets).where(eq(secrets.id, id)).run();
-    releaseCursorSessionQuarantine(row.id);
-    deleteCursorUsageCache(row.id, row.name);
+    releaseSecretProviderState(row.id, row.name);
     return reply.code(204).send();
   });
   app.get(`${prefix}/providers/status`, async (request, reply) => {

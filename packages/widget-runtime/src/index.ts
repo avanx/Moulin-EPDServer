@@ -3,6 +3,8 @@ export { FIXED_WIDGET_CSS } from "./fixed-css";
 export type {
   BambuPrinterStatus,
   BambuPrinterStatusOptions,
+  ClaudeCodeUsage,
+  ClaudeCodeUsageOptions,
   ExternalDataContract,
   KlipperCompatibility,
   KlipperPrinterStatus,
