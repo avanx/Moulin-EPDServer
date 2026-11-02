@@ -1,0 +1,86 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": [
+        "api_host",
+        "project_id",
+        "kid",
+        "private_key_secret_id"
+    ],
+    "additionalProperties": false,
+    "properties": {
+        "style_id": {
+            "type": "string",
+            "enum": [
+                "default",
+                "list"
+            ],
+            "default": "default"
+        },
+        "api_host": {
+            "type": "string",
+            "minLength": 1,
+            "description": "QWeather API Host from console settings, without https://"
+        },
+        "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "QWeather project ID used as JWT sub"
+        },
+        "kid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "QWeather JWT credential ID"
+        },
+        "private_key_secret_id": {
+            "type": "string",
+            "description": "encrypted Ed25519 private key PEM secret id or name"
+        },
+        "latitude": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90,
+            "default": 31.23
+        },
+        "longitude": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180,
+            "default": 121.47
+        },
+        "location_name": {
+            "type": "string",
+            "default": "上海"
+        },
+        "temperature_unit": {
+            "type": "string",
+            "enum": [
+                "celsius",
+                "fahrenheit"
+            ],
+            "default": "celsius"
+        },
+        "language": {
+            "type": "string",
+            "enum": [
+                "zh",
+                "en"
+            ],
+            "default": "zh"
+        },
+        "hide_text": {
+            "type": "boolean",
+            "default": false
+        },
+        "show_border": {
+            "type": "boolean",
+            "default": false
+        },
+        "cache_minutes": {
+            "type": "integer",
+            "minimum": 15,
+            "maximum": 240,
+            "default": 60
+        }
+    }
+}

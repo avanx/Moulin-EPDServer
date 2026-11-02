@@ -1,0 +1,15 @@
+{
+    "id": "default",
+    "title": {
+        "zh-CN": "四日横排",
+        "en": "4-day columns"
+    },
+    "defaultSize": {
+        "width": 480,
+        "height": 220
+    },
+    "requiredColors": [
+        "black",
+        "white"
+    ]
+}

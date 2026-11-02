@@ -39,6 +39,7 @@
 | [`clock`](packages/widgets/clock/) | 时间与日期 | 选择样式（`default` / `minimal` / `dotdate`），配置时间格式、IANA 时区与是否显示日期；取渲染端系统当前时刻后再按时区格式化 |
 | [`weather`](packages/widgets/weather/) | 实时天气（Open-Meteo） | 填写经纬度与地点名，可选摄氏/华氏、边框与缓存分钟数；天气与空气质量分属不同域名，空气质量失败时仍显示天气 |
 | [`weather-qweather`](packages/widgets/weather-qweather/) | 实时天气（和风天气 JWT） | 见 [使用说明](packages/widgets/weather-qweather/README.md) |
+| [`weather-qweather-daily`](packages/widgets/weather-qweather-daily/) | 四日天气：今天及未来三天预报（和风天气 JWT） | 见 [使用说明](packages/widgets/weather-qweather-daily/README.md) |
 | [`text`](packages/widgets/text/) | 自定义文本 | 填写文本、字号与对齐；样式含 `default` / `boxed` |
 | [`rectangle`](packages/widgets/rectangle/) | 矩形 / 线段装饰 | 配置填充、描边与圆角；宽或高为 1px 时退化为线段 |
 | [`cursor_usage`](packages/widgets/cursor_usage/) | Cursor 用量 | 见 [使用说明](packages/widgets/cursor_usage/README.md) |
@@ -51,6 +52,8 @@
 ### 天气-和风天气
 
 通过和风天气 JWT（Ed25519）拉取实况、小时预报与空气质量。在「密钥管理」选择用途「和风天气」生成密钥对，将公钥上传到和风控制台后，把 API Host、项目 ID、凭据 ID（kid）与私钥 Secret 填入组件。完整步骤见 [packages/widgets/weather-qweather/README.md](packages/widgets/weather-qweather/README.md)。
+
+`weather-qweather-daily` 使用相同的凭据，显示今天起共 4 天的每日预报（图标、天气描述、最高/最低温），见 [packages/widgets/weather-qweather-daily/README.md](packages/widgets/weather-qweather-daily/README.md)。
 
 ### Klipper 打印进度
 

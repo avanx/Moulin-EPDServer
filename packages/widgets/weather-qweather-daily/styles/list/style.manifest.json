@@ -1,0 +1,15 @@
+{
+    "id": "list",
+    "title": {
+        "zh-CN": "四日列表",
+        "en": "4-day list"
+    },
+    "defaultSize": {
+        "width": 300,
+        "height": 280
+    },
+    "requiredColors": [
+        "black",
+        "white"
+    ]
+}

@@ -1,0 +1,105 @@
+{
+    "type": "weather-qweather-daily",
+    "title": {
+        "zh-CN": "四日天气-和风天气",
+        "en": "4-Day Weather (QWeather)"
+    },
+    "description": {
+        "zh-CN": "使用和风天气 JWT 显示今天及未来三天（共 4 天）的天气预报",
+        "en": "Display a 4-day forecast (today + next 3 days) via QWeather JWT authentication"
+    },
+    "version": "1.0.0",
+    "defaultStyle": "default",
+    "supportsMock": true,
+    "mockConfig": {
+        "style_id": "default",
+        "api_host": "abcxyz.qweatherapi.com",
+        "project_id": "mock-project",
+        "kid": "mock-kid",
+        "private_key_secret_id": "mock",
+        "latitude": 31.23,
+        "longitude": 121.47,
+        "location_name": "上海",
+        "temperature_unit": "celsius",
+        "language": "zh",
+        "hide_text": false,
+        "show_border": false,
+        "cache_minutes": 60
+    },
+    "mockData": {
+        "updateTime": "2026-07-28T10:35+08:00",
+        "daily": [
+            {
+                "fxDate": "2026-07-28",
+                "tempMax": 33,
+                "tempMin": 26,
+                "iconDay": "101",
+                "textDay": "多云",
+                "humidity": 72,
+                "precip": 0,
+                "windDirDay": "东南风",
+                "windScaleDay": "1-3"
+            },
+            {
+                "fxDate": "2026-07-29",
+                "tempMax": 31,
+                "tempMin": 25,
+                "iconDay": "306",
+                "textDay": "中雨",
+                "humidity": 88,
+                "precip": 12.4,
+                "windDirDay": "东风",
+                "windScaleDay": "3-4"
+            },
+            {
+                "fxDate": "2026-07-30",
+                "tempMax": 29,
+                "tempMin": 24,
+                "iconDay": "302",
+                "textDay": "雷阵雨",
+                "humidity": 85,
+                "precip": 6.1,
+                "windDirDay": "东北风",
+                "windScaleDay": "1-3"
+            },
+            {
+                "fxDate": "2026-07-31",
+                "tempMax": 34,
+                "tempMin": 27,
+                "iconDay": "100",
+                "textDay": "晴",
+                "humidity": 60,
+                "precip": 0,
+                "windDirDay": "南风",
+                "windScaleDay": "1-3"
+            },
+            {
+                "fxDate": "2026-08-01",
+                "tempMax": 35,
+                "tempMin": 27,
+                "iconDay": "100",
+                "textDay": "晴",
+                "humidity": 58,
+                "precip": 0,
+                "windDirDay": "南风",
+                "windScaleDay": "1-3"
+            }
+        ],
+        "_mock": true
+    },
+    "externalData": {
+        "provider": "qweather",
+        "cacheSeconds": 3600,
+        "staleSeconds": 43200,
+        "secretConfigField": "private_key_secret_id",
+        "allowedHosts": [
+            "*.qweatherapi.com",
+            "devapi.qweather.com",
+            "api.qweather.com"
+        ],
+        "description": {
+            "zh-CN": "使用 Ed25519 JWT 请求和风天气 7 天预报，取今天起的 4 天显示",
+            "en": "Fetches the QWeather 7-day forecast with Ed25519 JWT and shows 4 days starting today"
+        }
+    }
+}

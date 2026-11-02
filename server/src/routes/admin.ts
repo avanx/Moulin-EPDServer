@@ -47,7 +47,7 @@ function pluginSupportsColorMode(type: string, colorMode: string): boolean {
   }
 }
 
-const knownProviderTypes = new Set(["cursor_usage", "claude_usage", "weather", "weather-qweather", "bambu_print", "klipper_print"]);
+const knownProviderTypes = new Set(["cursor_usage", "claude_usage", "weather", "weather-qweather", "weather-qweather-daily", "bambu_print", "klipper_print"]);
 const secretPurposes = new Set(["general_key", "cursor_session", "qweather_jwt", "claude_oauth"]);
 
 function providerCacheKey(widget: Widget): string | undefined {
@@ -72,6 +72,17 @@ function providerCacheKey(widget: Widget): string | undefined {
     const longitude = Number(value.longitude);
     return host && projectId && kid && Number.isFinite(latitude) && Number.isFinite(longitude)
       ? `widget:weather-qweather:weather-qweather:v1:${host}:${projectId}:${kid}:${latitude.toFixed(2)}:${longitude.toFixed(2)}`
+      : undefined;
+  }
+  if (widget.widgetType === "weather-qweather-daily") {
+    const host = String(value.api_host ?? "").trim().replace(/^https?:\/\//i, "").replace(/\/+$/g, "");
+    const projectId = String(value.project_id ?? "");
+    const kid = String(value.kid ?? "");
+    const latitude = Number(value.latitude);
+    const longitude = Number(value.longitude);
+    const lang = value.language === "en" ? "en" : "zh";
+    return host && projectId && kid && Number.isFinite(latitude) && Number.isFinite(longitude)
+      ? `widget:weather-qweather-daily:weather-qweather-daily:v1:${host}:${projectId}:${kid}:${latitude.toFixed(2)}:${longitude.toFixed(2)}:${lang}`
       : undefined;
   }
   if (widget.widgetType === "bambu_print") {
