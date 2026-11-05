@@ -64,6 +64,8 @@ export type Widget = {
   alignment_margin: AlignmentMargin
   config: Record<string, unknown>
   config_version: number
+  /** Shared data source this widget reads from; null/undefined means direct fetch. */
+  data_source_id?: string | null
 }
 
 export type LocalizedValue = string | Record<string, string>
@@ -124,6 +126,46 @@ export type WidgetMeta = {
     requiredColors: string[]
   }>
   defaultStyle?: string
+  /** Config fields that belong to the data source; non-empty means the widget can use a shared data source. */
+  sharedFields?: string[]
+}
+
+export type SharedDataSource = {
+  id: string
+  widget_type: string
+  name: string
+  config: Record<string, unknown>
+  refresh_seconds: number | null
+  has_payload: boolean
+  last_success_at: string | null
+  last_error: string | null
+  expires_at: string | null
+  stale_until: string | null
+  usage_count: number
+  created_at: string
+  updated_at: string
+}
+
+/** Copy of a widget meta whose schema and settings UI only contain the fields accepted by keep. */
+export function filterMetaFields<T extends WidgetMeta>(meta: T, keep: (field: string) => boolean): T {
+  const properties = Object.fromEntries(
+    Object.entries(meta.configSchema.properties || {}).filter(([key]) => keep(key)),
+  )
+  const ui = meta.settingsUi || {}
+  return {
+    ...meta,
+    configSchema: {
+      ...meta.configSchema,
+      properties,
+      required: (meta.configSchema.required || []).filter(keep),
+    },
+    settingsUi: {
+      ...ui,
+      sections: (ui.sections || [])
+        .map(section => ({ ...section, fields: section.fields.filter(keep) }))
+        .filter(section => section.fields.length > 0),
+    },
+  }
 }
 
 export type PluginMeta = WidgetMeta & {

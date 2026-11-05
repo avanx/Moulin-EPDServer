@@ -49,6 +49,10 @@
 
 `exmaple` 为开发示例组件（默认禁用），规范见 [packages/widgets/exmaple/README.md](packages/widgets/exmaple/README.md)。
 
+### 共享数据源
+
+多块屏幕放了同一种组件、取的又是同一份数据（例如同一地点的天气、同一个 Claude 账号的用量）时，可以在管理端「共享数据源」页面创建一个数据源，再在各组件的「数据来源」里选中它。服务器会保存这个数据源的最新原始数据，过期后只请求一次，同时在渲染的多块屏幕共用这一次请求；静默时段没有屏幕渲染，也就不会产生请求。不绑定数据源的组件仍按原来的方式自己请求数据。组件需要在 manifest 中声明 `externalData.sharedFields` 才能使用共享数据源，详见 [示例组件开发规范](packages/widgets/exmaple/README.md#外部数据与共享数据源)。
+
 ### 天气-和风天气
 
 通过和风天气 JWT（Ed25519）拉取实况、小时预报与空气质量。在「密钥管理」选择用途「和风天气」生成密钥对，将公钥上传到和风控制台后，把 API Host、项目 ID、凭据 ID（kid）与私钥 Secret 填入组件。完整步骤见 [packages/widgets/weather-qweather/README.md](packages/widgets/weather-qweather/README.md)。

@@ -5,8 +5,8 @@ import { AlertCircle, Check, ChevronDown, ChevronRight, Download, FileUp, Packag
 import { Rnd } from 'react-rnd'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useRoute } from 'wouter'
-import { api, apiBlob, compatibleStyles, isStyleCompatible } from '../../api'
-import type { AlignmentMargin, PluginMeta, Screen, ScreenDocument, Widget, WidgetMeta } from '../../api'
+import { api, apiBlob, compatibleStyles, filterMetaFields, isStyleCompatible } from '../../api'
+import type { AlignmentMargin, PluginMeta, Screen, ScreenDocument, SharedDataSource, Widget, WidgetMeta } from '../../api'
 import { randomUUID } from '../../uuid'
 import PluginSettingsForm from './PluginSettingsForm'
 
@@ -32,6 +32,44 @@ function downloadJson(document: ScreenDocument, filename: string) {
   anchor.download = filename
   anchor.click()
   URL.revokeObjectURL(url)
+}
+
+/** Chooses between direct fetch and one of the user's shared data sources of the same widget type. */
+function DataSourcePicker({
+  meta,
+  widget,
+  sources,
+  onChange,
+}: {
+  meta: WidgetMeta
+  widget: EditorWidget
+  sources: SharedDataSource[]
+  onChange: (patch: Partial<EditorWidget>) => void
+}) {
+  const { t } = useTranslation()
+  const matching = sources.filter(source => source.widget_type === meta.type)
+  const bound = matching.find(source => source.id === widget.data_source_id)
+  const missing = Boolean(widget.data_source_id) && !bound
+  return <div className="plugin-settings-field data-source-picker">
+    <span>{t('dataSourceField')}</span>
+    <select
+      value={widget.data_source_id || ''}
+      onChange={event => {
+        const source = matching.find(item => item.id === event.target.value)
+        onChange(source
+          ? { data_source_id: source.id, config: { ...widget.config, ...source.config } }
+          : { data_source_id: null })
+      }}
+    >
+      <option value="">{t('dataSourceDirect')}</option>
+      {missing && <option value={widget.data_source_id!}>{t('dataSourceMissing')}</option>}
+      {matching.map(source => <option key={source.id} value={source.id}>{source.name}</option>)}
+    </select>
+    <small>
+      {bound ? t('dataSourceBoundHint', { name: bound.name }) : t('dataSourceDirectHint')}
+      {' '}<Link href="/data-sources">{t('dataSourceManage')}</Link>
+    </small>
+  </div>
 }
 
 function WidgetStylePicker({
@@ -403,6 +441,7 @@ export default function EditorPage() {
   const screenQuery = useQuery({ queryKey: ['screen', id], queryFn: () => api<Screen>(`/api/v1/admin/screens/${id}`) })
   const widgetsQuery = useQuery({ queryKey: ['widgets', id], queryFn: () => api<Widget[]>(`/api/v1/admin/screens/${id}/widgets`) })
   const pluginsQuery = useQuery({ queryKey: ['screen-plugins', id], queryFn: () => api<PluginMeta[]>(`/api/v1/admin/screens/${id}/plugins`) })
+  const sourcesQuery = useQuery({ queryKey: ['data-sources'], queryFn: () => api<SharedDataSource[]>('/api/v1/admin/data-sources') })
   const screen = screenQuery.data
   const plugins = pluginsQuery.data || []
   const persistedWidgets = widgetsQuery.data || []
@@ -721,6 +760,6 @@ export default function EditorPage() {
           </div>
         </section>
       </section>
-      <aside className="card inspector"><h3>{activeMeta ? localized(activeMeta.title, i18n.language, activeMeta.type) : t('editor')}</h3>{active && activeMeta ? <><div className="geometry-editor"><h4>{t('positionAndSize')}</h4><div className="geometry-grid"><Field label="X"><input type="number" value={active.x} onChange={event => updateGeometry('x', Number(event.target.value))} /></Field><Field label="Y"><input type="number" value={active.y} onChange={event => updateGeometry('y', Number(event.target.value))} /></Field><Field label={t('width')}><input type="number" min="1" value={active.width} onChange={event => updateGeometry('width', Number(event.target.value))} /></Field><Field label={t('height')}><input type="number" min="1" value={active.height} onChange={event => updateGeometry('height', Number(event.target.value))} /></Field></div><details className="alignment-margin" key={active.id}><summary><ChevronRight size={14} />{t('alignmentMargin')}</summary><div className="geometry-grid"><Field label={t('top')}><input type="number" min="0" max={screen.height - active.height} value={active.alignment_margin.top} onChange={event => updateAlignmentMargin('top', Number(event.target.value))} /></Field><Field label={t('bottom')}><input type="number" min="0" max={screen.height - active.height} value={active.alignment_margin.bottom} onChange={event => updateAlignmentMargin('bottom', Number(event.target.value))} /></Field><Field label={t('left')}><input type="number" min="0" max={screen.width - active.width} value={active.alignment_margin.left} onChange={event => updateAlignmentMargin('left', Number(event.target.value))} /></Field><Field label={t('right')}><input type="number" min="0" max={screen.width - active.width} value={active.alignment_margin.right} onChange={event => updateAlignmentMargin('right', Number(event.target.value))} /></Field></div></details></div><WidgetStylePicker meta={activeMeta} value={String(active.config.style_id || activeMeta.defaultStyle || 'default')} language={i18n.language} availableColors={screen.available_colors} onChange={styleId => changeWidgetStyle(active, activeMeta, styleId)} /><PluginSettingsForm meta={activeMeta} value={active.config} language={i18n.language} onChange={config => updateWidget(active, { config })} /><Button variant="danger" onClick={() => deleteWidget(active.id)}>{t('delete')}</Button></> : <ScreenSettings screen={screen} />}</aside>
+      <aside className="card inspector"><h3>{activeMeta ? localized(activeMeta.title, i18n.language, activeMeta.type) : t('editor')}</h3>{active && activeMeta ? <><div className="geometry-editor"><h4>{t('positionAndSize')}</h4><div className="geometry-grid"><Field label="X"><input type="number" value={active.x} onChange={event => updateGeometry('x', Number(event.target.value))} /></Field><Field label="Y"><input type="number" value={active.y} onChange={event => updateGeometry('y', Number(event.target.value))} /></Field><Field label={t('width')}><input type="number" min="1" value={active.width} onChange={event => updateGeometry('width', Number(event.target.value))} /></Field><Field label={t('height')}><input type="number" min="1" value={active.height} onChange={event => updateGeometry('height', Number(event.target.value))} /></Field></div><details className="alignment-margin" key={active.id}><summary><ChevronRight size={14} />{t('alignmentMargin')}</summary><div className="geometry-grid"><Field label={t('top')}><input type="number" min="0" max={screen.height - active.height} value={active.alignment_margin.top} onChange={event => updateAlignmentMargin('top', Number(event.target.value))} /></Field><Field label={t('bottom')}><input type="number" min="0" max={screen.height - active.height} value={active.alignment_margin.bottom} onChange={event => updateAlignmentMargin('bottom', Number(event.target.value))} /></Field><Field label={t('left')}><input type="number" min="0" max={screen.width - active.width} value={active.alignment_margin.left} onChange={event => updateAlignmentMargin('left', Number(event.target.value))} /></Field><Field label={t('right')}><input type="number" min="0" max={screen.width - active.width} value={active.alignment_margin.right} onChange={event => updateAlignmentMargin('right', Number(event.target.value))} /></Field></div></details></div><WidgetStylePicker meta={activeMeta} value={String(active.config.style_id || activeMeta.defaultStyle || 'default')} language={i18n.language} availableColors={screen.available_colors} onChange={styleId => changeWidgetStyle(active, activeMeta, styleId)} />{activeMeta.sharedFields?.length ? <DataSourcePicker meta={activeMeta} widget={active} sources={sourcesQuery.data || []} onChange={patch => updateWidget(active, patch)} /> : null}<PluginSettingsForm meta={active.data_source_id ? filterMetaFields(activeMeta, field => !(activeMeta.sharedFields || []).includes(field)) : activeMeta} value={active.config} language={i18n.language} onChange={config => updateWidget(active, { config })} /><Button variant="danger" onClick={() => deleteWidget(active.id)}>{t('delete')}</Button></> : <ScreenSettings screen={screen} />}</aside>
     </div></>
 }

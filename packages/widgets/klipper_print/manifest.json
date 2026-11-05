@@ -35,6 +35,13 @@
         "cacheSeconds": 60,
         "staleSeconds": 600,
         "secretConfigField": "api_secret_id",
+        "sharedFields": [
+            "compatibility",
+            "host",
+            "port",
+            "api_secret_id",
+            "cache_minutes"
+        ],
         "description": {
             "zh-CN": "通过局域网 HTTP 连接 Moonraker，只读取打印状态",
             "en": "Connects to Moonraker over LAN HTTP with read-only status requests"

@@ -1,11 +1,12 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Copy, FileUp, Globe2, KeyRound, LayoutDashboard, LogOut, Monitor, Package, Pencil, Plus, RefreshCw, Save, Server, Settings2, Trash2, Users } from 'lucide-react'
+import { Copy, Database, FileUp, Globe2, KeyRound, LayoutDashboard, LogOut, Monitor, Package, Pencil, Plus, RefreshCw, Save, Server, Settings2, Trash2, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, Redirect, Route, Switch, useLocation } from 'wouter'
 import { api, login, logout, restoreSession } from './api'
 import type { AuthUser, ManagedUser, Screen, ScreenDocument } from './api'
+import DataSourcesPage from './components/data-sources/DataSourcesPage'
 import EditorPage from './components/editor/EditorPage'
 import PluginMarketplacePage from './components/plugins/PluginMarketplacePage'
 import { sha256Hex } from './sha256'
@@ -78,6 +79,7 @@ function Shell({ children }: { children: React.ReactNode }) {
     ['/', t('screens'), LayoutDashboard],
     ...(role === 'admin' ? [['/plugins', t('pluginMarketplace'), Package] as const] : []),
     ['/simulator', t('simulator'), Monitor],
+    ['/data-sources', t('dataSources'), Database],
     ['/secrets', t('secrets'), KeyRound],
     ...(role === 'admin' ? [['/system/users', t('users'), Users] as const] : []),
   ]
@@ -779,7 +781,7 @@ function SimulatorPage() {
 
 function AuthenticatedApp() {
   const isAdmin = useAuth().role === 'admin'
-  return <Shell><Switch><Route path="/"><ScreensPage /></Route><Route path="/system/account"><AccountSecurityPage /></Route><Route path="/system/users">{isAdmin ? <UsersPage /> : <Redirect to="/" />}</Route><Route path="/system"><SystemInfoPage /></Route><Route path="/screens/:id"><EditorPage /></Route><Route path="/plugins">{isAdmin ? <PluginMarketplacePage /> : <Redirect to="/" />}</Route><Route path="/secrets"><SecretsPage /></Route><Route path="/simulator"><SimulatorPage /></Route><Route><Redirect to="/" /></Route></Switch></Shell>
+  return <Shell><Switch><Route path="/"><ScreensPage /></Route><Route path="/system/account"><AccountSecurityPage /></Route><Route path="/system/users">{isAdmin ? <UsersPage /> : <Redirect to="/" />}</Route><Route path="/system"><SystemInfoPage /></Route><Route path="/screens/:id"><EditorPage /></Route><Route path="/plugins">{isAdmin ? <PluginMarketplacePage /> : <Redirect to="/" />}</Route><Route path="/data-sources"><DataSourcesPage /></Route><Route path="/secrets"><SecretsPage /></Route><Route path="/simulator"><SimulatorPage /></Route><Route><Redirect to="/" /></Route></Switch></Shell>
 }
 
 function App() {

@@ -22,6 +22,8 @@ CREATE TABLE IF NOT EXISTS snapshot_regions(id VARCHAR(36) PRIMARY KEY,snapshot_
 CREATE TABLE IF NOT EXISTS provider_states(id VARCHAR(36) PRIMARY KEY,cache_key VARCHAR(180) NOT NULL UNIQUE,payload JSON NOT NULL,last_error TEXT,last_success_at DATETIME,expires_at DATETIME,stale_until DATETIME);
 CREATE TABLE IF NOT EXISTS render_metrics(id VARCHAR(36) PRIMARY KEY,screen_id VARCHAR(36) NOT NULL,duration_ms FLOAT NOT NULL,created_at DATETIME NOT NULL);
 CREATE INDEX IF NOT EXISTS ix_render_metrics_screen_id ON render_metrics(screen_id);
+CREATE TABLE IF NOT EXISTS shared_data_sources(id VARCHAR(36) PRIMARY KEY,owner_id VARCHAR(36) NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,widget_type VARCHAR(80) NOT NULL,name VARCHAR(120) NOT NULL,config JSON NOT NULL,payload JSON,last_error TEXT,last_success_at DATETIME,expires_at DATETIME,stale_until DATETIME,created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL);
+CREATE UNIQUE INDEX IF NOT EXISTS ix_shared_data_sources_owner_name ON shared_data_sources(owner_id,name);
 `;
 
 function columnNames(table: string): Set<string> {
@@ -108,6 +110,9 @@ export async function bootstrapDatabase(): Promise<void> {
   ).run();
   if (!columnNames("secrets").has("disabled_reason")) {
     sqlite.exec("ALTER TABLE secrets ADD COLUMN disabled_reason TEXT");
+  }
+  if (!columnNames("widget_instances").has("data_source_id")) {
+    sqlite.exec("ALTER TABLE widget_instances ADD COLUMN data_source_id VARCHAR(36)");
   }
   sqlite.prepare(
     "UPDATE snapshots SET encoding = 'edp-bwry-v1' WHERE encoding = 'image2lcd-bwry-v1'",

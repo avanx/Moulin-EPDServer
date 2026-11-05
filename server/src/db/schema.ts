@@ -109,6 +109,8 @@ export const widgetInstances = sqliteTable("widget_instances", {
     .notNull()
     .default({}),
   configVersion: integer("config_version").notNull().default(1),
+  /** When set, data comes from this shared data source instead of a direct fetch. */
+  dataSourceId: uuid("data_source_id"),
   ...timestampColumns,
 });
 
@@ -217,6 +219,32 @@ export const providerStates = sqliteTable(
   ],
 );
 
+/** A server-maintained data source that many widgets of the same type can share. */
+export const sharedDataSources = sqliteTable(
+  "shared_data_sources",
+  {
+    id: uuid("id").primaryKey(),
+    ownerId: uuid("owner_id")
+      .notNull()
+      .references(() => adminUsers.id, { onDelete: "cascade" }),
+    widgetType: text("widget_type", { length: 80 }).notNull(),
+    name: text("name", { length: 120 }).notNull(),
+    config: text("config", { mode: "json" })
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    payload: text("payload", { mode: "json" }).$type<Record<string, unknown>>(),
+    lastError: text("last_error"),
+    lastSuccessAt: dateTime("last_success_at"),
+    expiresAt: dateTime("expires_at"),
+    staleUntil: dateTime("stale_until"),
+    ...timestampColumns,
+  },
+  (table) => [
+    uniqueIndex("ix_shared_data_sources_owner_name").on(table.ownerId, table.name),
+  ],
+);
+
 export const renderMetrics = sqliteTable(
   "render_metrics",
   {
@@ -240,6 +268,7 @@ export const allTables = [
   snapshots,
   snapshotRegions,
   providerStates,
+  sharedDataSources,
   renderMetrics,
 ] as const;
 

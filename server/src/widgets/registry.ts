@@ -24,6 +24,7 @@ export interface WidgetManifest {
     staleSeconds?: number;
     secretConfigField?: string;
     allowedHosts?: string[];
+    sharedFields?: string[];
     description?: Record<string, string>;
   };
 }
@@ -223,6 +224,15 @@ async function loadWidget(directory: string): Promise<LoadedWidget> {
   validateLocalized(manifest.title, "Widget title");
   if (manifest.description !== undefined) validateLocalized(manifest.description, "Widget description");
   if (!schema || schema.type !== "object") throw new Error("schema.json must describe an object");
+  const sharedFields = manifest.externalData?.sharedFields;
+  if (sharedFields !== undefined) {
+    const properties = (schema.properties ?? {}) as Record<string, unknown>;
+    if (!Array.isArray(sharedFields) || !sharedFields.length ||
+        sharedFields.some((field) => typeof field !== "string" || field === "style_id" || !(field in properties)) ||
+        new Set(sharedFields).size !== sharedFields.length) {
+      throw new Error("externalData.sharedFields must list unique schema properties other than style_id");
+    }
+  }
   const styles = new Map<string, WidgetStyle>();
   const stylesDirectory = join(directory, "styles");
   for (const entry of await readdir(stylesDirectory, { withFileTypes: true })) {
@@ -267,6 +277,7 @@ async function loadWidget(directory: string): Promise<LoadedWidget> {
         id, title, defaultSize, requiredColors,
       })),
       defaultStyle: manifest.defaultStyle,
+      sharedFields: manifest.externalData?.sharedFields ?? [],
     }),
   };
   return widget;
@@ -277,6 +288,7 @@ export class WidgetRegistry {
   readonly #records = new Map<string, PluginRecord>();
   readonly #ajv = new Ajv2020({ allErrors: true, useDefaults: true });
   readonly #validators = new Map<string, ValidateFunction>();
+  readonly #sharedValidators = new Map<string, ValidateFunction>();
   readonly #workspaceRoot = join(config.dataDir, "widget-workspace");
 
   #sourcePath(type: string, styleId: string, kind: "draft" | "published"): string {
@@ -383,6 +395,7 @@ export class WidgetRegistry {
     this.#widgets.clear();
     this.#records.clear();
     this.#validators.clear();
+    this.#sharedValidators.clear();
     const defaults = resolve(dirname(new URL(import.meta.url).pathname), "../../../packages/widgets");
     const roots = [resolve(process.cwd(), "../packages/widgets"), resolve(process.cwd(), "packages/widgets"), defaults, ...config.widgetDirs];
     const visited = new Set<string>();
@@ -714,6 +727,37 @@ export class WidgetRegistry {
     ]);
     widget.dataSource = widget.baseDataSource;
     return this.dataSource(type);
+  }
+
+  sharedFields(type: string): string[] {
+    return this.get(type).manifest.externalData?.sharedFields ?? [];
+  }
+
+  /** Validates the data-source part of a widget config (only the manifest's sharedFields). */
+  validateShared(type: string, raw: Record<string, unknown>): Record<string, unknown> {
+    const widget = this.get(type);
+    const fields = this.sharedFields(type);
+    if (!fields.length) throw new Error(`Widget ${type} does not support shared data sources`);
+    let validator = this.#sharedValidators.get(type);
+    if (!validator) {
+      const properties = (widget.schema.properties ?? {}) as Record<string, unknown>;
+      const required = Array.isArray(widget.schema.required) ? widget.schema.required as string[] : [];
+      validator = this.#ajv.compile({
+        type: "object",
+        additionalProperties: false,
+        required: required.filter((field) => fields.includes(field)),
+        properties: Object.fromEntries(fields.map((field) => [field, properties[field]])),
+      });
+      this.#sharedValidators.set(type, validator);
+    }
+    const value = Object.fromEntries(
+      Object.entries(raw).filter(([key]) => fields.includes(key)),
+    );
+    if (!validator(value)) {
+      const errors = (validator.errors ?? []).map((item) => `${item.instancePath}: ${item.message ?? "invalid"}`);
+      throw new Error(errors.join("; ") || "Invalid data source configuration");
+    }
+    return value;
   }
 
   validate(type: string, raw: Record<string, unknown>, colorMode?: string): Record<string, unknown> {

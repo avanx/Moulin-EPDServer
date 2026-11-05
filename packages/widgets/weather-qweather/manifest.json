@@ -68,6 +68,15 @@
             "devapi.qweather.com",
             "api.qweather.com"
         ],
+        "sharedFields": [
+            "api_host",
+            "project_id",
+            "kid",
+            "private_key_secret_id",
+            "latitude",
+            "longitude",
+            "cache_minutes"
+        ],
         "description": {
             "zh-CN": "使用 Ed25519 JWT 请求和风天气实况、小时预报与空气质量；空气质量失败时仍显示天气",
             "en": "Fetches QWeather now/hourly/AQI with Ed25519 JWT; forecast still works if AQI fails"

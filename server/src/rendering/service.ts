@@ -11,6 +11,7 @@ import {
 } from "../db/schema.js";
 import { databaseTimestampMillis } from "../security.js";
 import { runDataSource } from "../widgets/data-runner.js";
+import { effectiveWidgetConfig, readSharedSource } from "../widgets/shared-sources.js";
 import { registry, type WidgetSource, type WidgetStyleManifest } from "../widgets/registry.js";
 import { BrowserPool } from "./browser-pool.js";
 import { composeScreenHtml } from "./compose.js";
@@ -106,7 +107,7 @@ function errorWidgetHtml(type: string, error: unknown): string {
 }
 
 async function widgetHtml(
-  widget: Pick<Widget, "widgetType" | "width" | "height" | "config">,
+  widget: Pick<Widget, "widgetType" | "width" | "height" | "config"> & Partial<Pick<Widget, "dataSourceId">>,
   options: {
     forceMock?: boolean;
     allowMock?: boolean;
@@ -119,7 +120,7 @@ async function widgetHtml(
   } = {},
 ): Promise<{ html: string; mode: "real" | "mock" }> {
   const plugin = registry.get(widget.widgetType);
-  const configValue = registry.validate(widget.widgetType, widget.config);
+  let configValue = registry.validate(widget.widgetType, widget.config);
   const owner = options.ownerId === undefined ? {} : { ownerId: options.ownerId };
   let data: unknown;
   let mode: "real" | "mock" = "real";
@@ -154,19 +155,37 @@ async function widgetHtml(
     });
   } else {
     try {
-      data = await runDataSource({
-        type: widget.widgetType,
-        manifest: plugin.manifest,
-        source: plugin.dataSource,
-        config: configValue,
-        operation: "all",
-        options: {
-          persist: !options.allowMock,
-          locale: "zh-CN",
-          ...(options.strict === undefined ? {} : { strict: options.strict }),
-          ...owner,
-        },
-      });
+      if (widget.dataSourceId && options.ownerId !== undefined) {
+        // Shared data source: the server holds the raw payload; only adaptData runs per widget.
+        configValue = registry.validate(widget.widgetType, effectiveWidgetConfig({
+          widgetType: widget.widgetType,
+          config: widget.config,
+          dataSourceId: widget.dataSourceId,
+        }, options.ownerId));
+        data = await runDataSource({
+          type: widget.widgetType,
+          manifest: plugin.manifest,
+          source: plugin.dataSource,
+          config: configValue,
+          operation: "adapt",
+          input: await readSharedSource(widget.dataSourceId, options.ownerId),
+          options: { persist: false, locale: "zh-CN", ...owner },
+        });
+      } else {
+        data = await runDataSource({
+          type: widget.widgetType,
+          manifest: plugin.manifest,
+          source: plugin.dataSource,
+          config: configValue,
+          operation: "all",
+          options: {
+            persist: !options.allowMock,
+            locale: "zh-CN",
+            ...(options.strict === undefined ? {} : { strict: options.strict }),
+            ...owner,
+          },
+        });
+      }
     } catch (error) {
       options.warnings?.push(`${widget.widgetType}: ${String(error)}`);
       if (!options.allowMock) {

@@ -97,6 +97,16 @@
             "devapi.qweather.com",
             "api.qweather.com"
         ],
+        "sharedFields": [
+            "api_host",
+            "project_id",
+            "kid",
+            "private_key_secret_id",
+            "latitude",
+            "longitude",
+            "language",
+            "cache_minutes"
+        ],
         "description": {
             "zh-CN": "使用 Ed25519 JWT 请求和风天气 7 天预报，取今天起的 4 天显示",
             "en": "Fetches the QWeather 7-day forecast with Ed25519 JWT and shows 4 days starting today"

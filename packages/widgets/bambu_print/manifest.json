@@ -34,6 +34,12 @@
         "cacheSeconds": 60,
         "staleSeconds": 600,
         "secretConfigField": "access_secret_id",
+        "sharedFields": [
+            "host",
+            "serial",
+            "access_secret_id",
+            "cache_minutes"
+        ],
         "description": {
             "zh-CN": "使用访问码通过局域网 MQTT TLS 连接拓竹打印机",
             "en": "Connects to a Bambu printer over LAN MQTT TLS using its access code"

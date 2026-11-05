@@ -30,6 +30,10 @@
         "cacheSeconds": 900,
         "staleSeconds": 86400,
         "secretConfigField": "secret_id",
+        "sharedFields": [
+            "secret_id",
+            "cache_minutes"
+        ],
         "description": {
             "zh-CN": "使用 Claude OAuth 凭据请求 5 小时与 7 天用量",
             "en": "Uses Claude OAuth credentials for 5-hour and 7-day usage"

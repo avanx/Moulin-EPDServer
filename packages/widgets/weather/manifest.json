@@ -78,6 +78,12 @@
             "api.open-meteo.com",
             "air-quality-api.open-meteo.com"
         ],
+        "sharedFields": [
+            "latitude",
+            "longitude",
+            "temperature_unit",
+            "cache_minutes"
+        ],
         "description": {
             "zh-CN": "请求 Open-Meteo 天气与空气质量；空气质量接口失败时仍显示天气",
             "en": "Fetches Open-Meteo weather and air quality; forecast still works if AQI fails"

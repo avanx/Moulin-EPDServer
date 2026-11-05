@@ -16,7 +16,7 @@ type RpcResult = {
 type RunRequest = {
   kind: "run";
   code: string;
-  operation: "all" | "adapt";
+  operation: "all" | "adapt" | "fetch";
   config: Record<string, unknown>;
   source?: unknown;
   locale: string;
@@ -145,12 +145,12 @@ async function execute(message: RunRequest): Promise<void> {
       ) => Promise<unknown>;
       adaptData?: (source: unknown, config: Record<string, unknown>) => unknown;
     };
-    const source = message.operation === "all"
+    const source = message.operation === "all" || message.operation === "fetch"
       ? dataModule.fetchData
         ? await dataModule.fetchData({ services, locale: message.locale }, message.config)
         : {}
       : message.source;
-    const value = dataModule.adaptData
+    const value = message.operation !== "fetch" && dataModule.adaptData
       ? await dataModule.adaptData(source, message.config)
       : source;
     channel.send?.({ kind: "done", ok: true, value });

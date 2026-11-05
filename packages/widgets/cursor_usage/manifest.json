@@ -31,6 +31,10 @@
         "allowedHosts": [
             "cursor.com"
         ],
+        "sharedFields": [
+            "secret_id",
+            "cache_minutes"
+        ],
         "description": {
             "zh-CN": "使用 WorkosCursorSessionToken 请求 Cursor 当前周期用量",
             "en": "Uses WorkosCursorSessionToken for current-period usage"

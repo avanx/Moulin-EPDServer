@@ -21,7 +21,8 @@ export interface DataRunInput {
   manifest: WidgetManifest;
   source: string;
   config: Record<string, unknown>;
-  operation: "all" | "adapt";
+  /** all = fetchData + adaptData, adapt = adaptData(input), fetch = fetchData only (raw source). */
+  operation: "all" | "adapt" | "fetch";
   input?: unknown;
   options?: DataRunOptions;
 }

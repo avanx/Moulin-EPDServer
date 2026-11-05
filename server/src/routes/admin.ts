@@ -9,7 +9,7 @@ import { config } from "../config.js";
 import { db, sqlite } from "../db/index.js";
 import {
   adminSessions, adminUsers, deviceCredentials, pluginPackages, providerStates, screenPlugins,
-  screens, secrets, snapshotRegions, snapshots, widgetInstances,
+  screens, secrets, sharedDataSources, snapshotRegions, snapshots, widgetInstances,
 } from "../db/schema.js";
 import { composeScreen, renderDraft, renderWidgetPreview } from "../rendering/service.js";
 import {
@@ -23,6 +23,10 @@ import { runDataSource } from "../widgets/data-runner.js";
 import { registry } from "../widgets/registry.js";
 import { createClaudeAuthorization, exchangeClaudeAuthorization, parseClaudeOAuthCredentials } from "../claude-oauth.js";
 import { releaseClaudeSessionQuarantine, releaseCursorSessionQuarantine } from "../widgets/services.js";
+import {
+  expireSharedSources, expireSharedSourcesUsingSecret, loadSharedSource, mergeSharedConfig, readSharedSource,
+  sharedRefreshSeconds, type SharedDataSource,
+} from "../widgets/shared-sources.js";
 
 type Account = typeof adminUsers.$inferSelect;
 type Screen = typeof screens.$inferSelect;
@@ -131,11 +135,12 @@ function deleteClaudeUsageCache(id: string, name: string): void {
   }
 }
 
-function releaseSecretProviderState(id: string, name: string): void {
+function releaseSecretProviderState(id: string, name: string, ownerId: string): void {
   releaseCursorSessionQuarantine(id);
   releaseClaudeSessionQuarantine(id);
   deleteCursorUsageCache(id, name);
   deleteClaudeUsageCache(id, name);
+  expireSharedSourcesUsingSecret(ownerId, [id, name]);
 }
 
 function pruneUnreferencedProviderStates(): void {
@@ -188,8 +193,39 @@ function widgetJson(row: Widget): Json {
   return {
     id: row.id, screen_id: row.screenId, widget_type: row.widgetType, x: row.x, y: row.y,
     width: row.width, height: row.height, z_index: row.zIndex, alignment_margin: row.alignmentMargin,
-    config: row.config, config_version: row.configVersion,
+    config: row.config, config_version: row.configVersion, data_source_id: row.dataSourceId ?? null,
   };
+}
+
+function sharedSourceUsage(id: string): number {
+  return db.select({ id: widgetInstances.id }).from(widgetInstances)
+    .where(eq(widgetInstances.dataSourceId, id)).all().length;
+}
+
+function sharedSourceJson(row: SharedDataSource): Json {
+  let refreshSeconds: number | null = null;
+  try { refreshSeconds = sharedRefreshSeconds(row); } catch { refreshSeconds = null; }
+  return {
+    id: row.id, widget_type: row.widgetType, name: row.name, config: row.config,
+    refresh_seconds: refreshSeconds, has_payload: row.payload != null,
+    last_success_at: row.lastSuccessAt, last_error: row.lastError,
+    expires_at: row.expiresAt, stale_until: row.staleUntil,
+    usage_count: sharedSourceUsage(row.id), created_at: row.createdAt, updated_at: row.updatedAt,
+  };
+}
+
+function sortedJson(value: Record<string, unknown>): string {
+  return JSON.stringify(Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b))));
+}
+
+/** Validates a shared data source body; widget type must be available and declare sharedFields. */
+function parseSharedSource(body: unknown, widgetType: string): { name: string; config: Json } {
+  const value = object(body);
+  const name = String(value.name ?? "").trim();
+  if (!name || name.length > 120) throw new Error("Name must be 1-120 characters");
+  const plugin = db.select().from(pluginPackages).where(eq(pluginPackages.typeName, widgetType)).get();
+  if (!plugin || plugin.status !== "available") throw new Error(`Plugin is not available: ${widgetType}`);
+  return { name, config: registry.validateShared(widgetType, { ...object(value.config) }) };
 }
 
 function parseScreen(body: unknown, allowLegacyPanelLayout = false): ScreenValues {
@@ -233,6 +269,8 @@ function parseWidget(
   screen: Screen,
   id: string = crypto.randomUUID(),
   useMockDefaults = false,
+  /** Drop a binding to a missing/mismatched shared data source instead of rejecting (used by import). */
+  lenientDataSource = false,
 ): Widget {
   const value = object(body);
   const widgetType = String(value.widget_type ?? "");
@@ -254,13 +292,28 @@ function parseWidget(
   if (Object.values(alignmentMargin).some((item) => item < 0)) {
     throw new Error("Widget alignment margins must be non-negative integers");
   }
-  const rawConfig = registry.validate(widgetType, candidateConfig, screen.colorMode);
+  const requestedSource = typeof value.data_source_id === "string" && value.data_source_id
+    ? value.data_source_id
+    : null;
+  let dataSourceId: string | null = null;
+  let config = candidateConfig;
+  if (requestedSource) {
+    const source = loadSharedSource(requestedSource, screen.ownerId);
+    if (source && source.widgetType === widgetType) {
+      dataSourceId = source.id;
+      // Keep a complete config on the widget so it still works if it is later unbound.
+      config = mergeSharedConfig(candidateConfig, source);
+    } else if (!lenientDataSource) {
+      throw new Error("Shared data source not found or belongs to a different widget type");
+    }
+  }
+  const rawConfig = registry.validate(widgetType, config, screen.colorMode);
   const time = now();
   return {
     id, screenId: screen.id, widgetType, x, y, width, height, zIndex: integer(value.z_index),
     alignmentMargin,
     config: rawConfig,
-    configVersion: 1, createdAt: time, updatedAt: time,
+    configVersion: 1, dataSourceId, createdAt: time, updatedAt: time,
   };
 }
 
@@ -941,7 +994,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
         disabledReason: null,
         updatedAt: time,
       }).where(eq(secrets.id, old.id)).run();
-      releaseSecretProviderState(old.id, old.name);
+      releaseSecretProviderState(old.id, old.name, user.id);
     } else {
       db.insert(secrets).values({
         id: crypto.randomUUID(), ownerId: user.id, name, purpose, encryptedValue: encryptSecret(value), createdAt: time, updatedAt: time,
@@ -956,7 +1009,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     const row = db.select().from(secrets).where(and(eq(secrets.id, id), eq(secrets.ownerId, user.id))).get();
     if (!row) return fail(reply, 404);
     db.delete(secrets).where(eq(secrets.id, id)).run();
-    releaseSecretProviderState(row.id, row.name);
+    releaseSecretProviderState(row.id, row.name, user.id);
     return reply.code(204).send();
   });
   app.get(`${prefix}/providers/status`, async (request, reply) => {
@@ -965,6 +1018,73 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     return db.select().from(providerStates).orderBy(asc(providerStates.cacheKey)).all().map((row) => ({
       cacheKey: row.cacheKey, lastSuccessAt: row.lastSuccessAt, lastError: row.lastError, expiresAt: row.expiresAt,
     }));
+  });
+
+  app.get(`${prefix}/data-sources`, async (request, reply) => {
+    const user = await requireUser(request, reply); if (!user) return;
+    const type = (request.query as Json).widget_type;
+    const condition = typeof type === "string" && type
+      ? and(eq(sharedDataSources.ownerId, user.id), eq(sharedDataSources.widgetType, type))
+      : eq(sharedDataSources.ownerId, user.id);
+    return db.select().from(sharedDataSources).where(condition).orderBy(asc(sharedDataSources.name)).all()
+      .map(sharedSourceJson);
+  });
+  app.post(`${prefix}/data-sources`, async (request, reply) => {
+    const user = await requireUser(request, reply); if (!user) return;
+    const widgetType = String(object(request.body).widget_type ?? "");
+    try {
+      const parsed = parseSharedSource(request.body, widgetType);
+      const taken = db.select().from(sharedDataSources)
+        .where(and(eq(sharedDataSources.ownerId, user.id), eq(sharedDataSources.name, parsed.name))).get();
+      if (taken) return fail(reply, 409, "A data source with this name already exists");
+      const time = now();
+      const row: SharedDataSource = {
+        id: crypto.randomUUID(), ownerId: user.id, widgetType, name: parsed.name, config: parsed.config,
+        payload: null, lastError: null, lastSuccessAt: null, expiresAt: null, staleUntil: null,
+        createdAt: time, updatedAt: time,
+      };
+      db.insert(sharedDataSources).values(row).run();
+      return reply.code(201).send(sharedSourceJson(row));
+    } catch (error) { return fail(reply, 422, String(error)); }
+  });
+  app.put(`${prefix}/data-sources/:sourceId`, async (request, reply) => {
+    const user = await requireUser(request, reply); if (!user) return;
+    const old = loadSharedSource(String((request.params as Json).sourceId), user.id);
+    if (!old) return fail(reply, 404);
+    try {
+      const parsed = parseSharedSource(request.body, old.widgetType);
+      const taken = db.select().from(sharedDataSources)
+        .where(and(eq(sharedDataSources.ownerId, user.id), eq(sharedDataSources.name, parsed.name))).get();
+      if (taken && taken.id !== old.id) return fail(reply, 409, "A data source with this name already exists");
+      const changed = sortedJson(parsed.config) !== sortedJson(old.config);
+      db.update(sharedDataSources).set({
+        name: parsed.name,
+        config: parsed.config,
+        updatedAt: now(),
+        // Different fetch parameters make the held payload meaningless, even as a stale fallback.
+        ...(changed ? { payload: null, expiresAt: null, staleUntil: null, lastError: null } : {}),
+      }).where(eq(sharedDataSources.id, old.id)).run();
+      return sharedSourceJson(loadSharedSource(old.id, user.id)!);
+    } catch (error) { return fail(reply, 422, String(error)); }
+  });
+  app.delete(`${prefix}/data-sources/:sourceId`, async (request, reply) => {
+    const user = await requireUser(request, reply); if (!user) return;
+    const row = loadSharedSource(String((request.params as Json).sourceId), user.id);
+    if (!row) return fail(reply, 404);
+    const usage = sharedSourceUsage(row.id);
+    if (usage) return fail(reply, 409, `Data source is used by ${usage} widget(s)`);
+    db.delete(sharedDataSources).where(eq(sharedDataSources.id, row.id)).run();
+    return reply.code(204).send();
+  });
+  app.post(`${prefix}/data-sources/:sourceId/refresh`, async (request, reply) => {
+    const user = await requireUser(request, reply); if (!user) return;
+    const id = String((request.params as Json).sourceId);
+    if (!loadSharedSource(id, user.id)) return fail(reply, 404);
+    expireSharedSources((row) => row.id === id);
+    try {
+      const data = await readSharedSource(id, user.id);
+      return { data, source: sharedSourceJson(loadSharedSource(id, user.id)!) };
+    } catch (error) { return fail(reply, 422, String(error)); }
   });
 
   app.get(`${prefix}/screens/:screenId/export`, async (request, reply) => {
@@ -1013,7 +1133,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
           updatedAt: time,
         };
       const widgetsBody = Array.isArray(document.widgets) ? document.widgets : [];
-      const widgetRows = widgetsBody.map((item) => parseWidget(item, row));
+      const widgetRows = widgetsBody.map((item) => parseWidget(item, row, crypto.randomUUID(), false, true));
       const pluginBody = object(document.plugins);
       for (const [type, enabled] of Object.entries(pluginBody)) {
         const plugin = db.select().from(pluginPackages).where(eq(pluginPackages.typeName, type)).get();

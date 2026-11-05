@@ -51,6 +51,8 @@ export interface ServiceOptions {
   strict?: boolean;
   /** Account the secrets are resolved against; secrets are never shared across users. */
   ownerId?: string;
+  /** Make cachedProvider a pass-through; used when the shared data source layer owns caching. */
+  bypassProviderCache?: boolean;
 }
 
 export type ProviderCacheRead =
@@ -424,6 +426,7 @@ export class WidgetServices {
   }
 
   readProviderCache(key: string): ProviderCacheRead {
+    if (this.options.bypassProviderCache) return { status: "miss" };
     const state = db.select().from(providerStates).where(eq(providerStates.cacheKey, key)).get();
     const now = Date.now();
     if (!this.options.strict && state?.expiresAt && databaseTimestampMillis(state.expiresAt) > now) {
@@ -441,7 +444,7 @@ export class WidgetServices {
     options: { ttlSeconds: number; staleSeconds?: number },
     payload: unknown,
   ): unknown {
-    if (this.options.persist !== false) {
+    if (this.options.persist !== false && !this.options.bypassProviderCache) {
       const state = db.select().from(providerStates).where(eq(providerStates.cacheKey, key)).get();
       const values = {
         payload: payload as Record<string, unknown>,
@@ -459,6 +462,7 @@ export class WidgetServices {
   }
 
   writeProviderFailure(key: string, error: unknown, stale?: unknown): unknown | undefined {
+    if (this.options.bypassProviderCache) return undefined;
     const state = db.select().from(providerStates).where(eq(providerStates.cacheKey, key)).get();
     if (state && this.options.persist !== false) {
       db.update(providerStates).set({

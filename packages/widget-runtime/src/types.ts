@@ -18,6 +18,8 @@ export interface ExternalDataContract {
   staleSeconds?: number;
   secretConfigField?: string;
   allowedHosts?: string[];
+  /** Config fields read by fetchData; lets screens share one server-maintained data source. */
+  sharedFields?: string[];
   description?: LocalizedText;
 }
 
