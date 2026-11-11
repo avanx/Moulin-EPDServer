@@ -29,6 +29,26 @@
                 "right"
             ],
             "default": "left"
+        },
+        "color": {
+            "type": "string",
+            "enum": [
+                "black",
+                "white",
+                "red",
+                "yellow"
+            ],
+            "default": "black"
+        },
+        "background": {
+            "type": "string",
+            "enum": [
+                "white",
+                "black",
+                "red",
+                "yellow"
+            ],
+            "default": "white"
         }
     }
 }

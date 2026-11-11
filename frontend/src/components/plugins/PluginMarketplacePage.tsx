@@ -156,6 +156,7 @@ export default function PluginMarketplacePage() {
             meta={editingPlugin}
             value={editingConfig}
             language={i18n.language}
+            availableColors={selectedScreen?.available_colors}
             onChange={setEditingConfig}
           />
         </details>

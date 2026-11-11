@@ -14,6 +14,20 @@
                 "font_size",
                 "align"
             ]
+        },
+        {
+            "title": {
+                "zh-CN": "颜色",
+                "en": "Colors"
+            },
+            "description": {
+                "zh-CN": "仅列出当前屏幕支持的颜色；红 / 黄需要多色屏",
+                "en": "Only colors supported by the current screen are listed; red / yellow need a multi-color screen"
+            },
+            "fields": [
+                "color",
+                "background"
+            ]
         }
     ],
     "fields": {
@@ -66,6 +80,80 @@
                     "label": {
                         "zh-CN": "右",
                         "en": "Right"
+                    }
+                }
+            ]
+        },
+        "color": {
+            "control": "color",
+            "label": {
+                "zh-CN": "文字颜色",
+                "en": "Text color"
+            },
+            "options": [
+                {
+                    "value": "black",
+                    "label": {
+                        "zh-CN": "黑",
+                        "en": "Black"
+                    }
+                },
+                {
+                    "value": "white",
+                    "label": {
+                        "zh-CN": "白",
+                        "en": "White"
+                    }
+                },
+                {
+                    "value": "red",
+                    "label": {
+                        "zh-CN": "红",
+                        "en": "Red"
+                    }
+                },
+                {
+                    "value": "yellow",
+                    "label": {
+                        "zh-CN": "黄",
+                        "en": "Yellow"
+                    }
+                }
+            ]
+        },
+        "background": {
+            "control": "color",
+            "label": {
+                "zh-CN": "背景颜色",
+                "en": "Background"
+            },
+            "options": [
+                {
+                    "value": "white",
+                    "label": {
+                        "zh-CN": "白",
+                        "en": "White"
+                    }
+                },
+                {
+                    "value": "black",
+                    "label": {
+                        "zh-CN": "黑",
+                        "en": "Black"
+                    }
+                },
+                {
+                    "value": "red",
+                    "label": {
+                        "zh-CN": "红",
+                        "en": "Red"
+                    }
+                },
+                {
+                    "value": "yellow",
+                    "label": {
+                        "zh-CN": "黄",
+                        "en": "Yellow"
                     }
                 }
             ]

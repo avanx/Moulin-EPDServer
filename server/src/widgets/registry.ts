@@ -777,6 +777,16 @@ export class WidgetRegistry {
       const available = new Set(colorModeColors(colorMode));
       const missing = style.requiredColors.filter((color) => !available.has(color));
       if (missing.length) throw new Error(`Style '${styleId}' for widget ${type} requires colors unavailable on ${colorMode}: ${missing.join(", ")}`);
+      // settings-ui fields with control "color" hold a palette name that must be displayable.
+      const fields = (widget.settingsUi.fields ?? {}) as Record<string, { control?: unknown }>;
+      const properties = (widget.schema.properties ?? {}) as Record<string, { default?: unknown }>;
+      for (const [key, field] of Object.entries(fields)) {
+        if (field?.control !== "color") continue;
+        const value = raw[key] ?? properties[key]?.default;
+        if (typeof value === "string" && !available.has(value)) {
+          throw new Error(`Widget ${type} field '${key}' uses color unavailable on ${colorMode}: ${value}`);
+        }
+      }
     }
     return raw;
   }

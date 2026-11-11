@@ -1,3 +1,4 @@
+/* color / background are palette names (black, white, red, yellow) used as CSS keywords. */
 .text {
     width: calc(100% - 2px);
     height: calc(100% - 2px);
@@ -10,6 +11,8 @@
     white-space: pre-wrap;
     overflow: hidden;
     font-weight: 700;
+    color: var(--config-color, black);
+    background: var(--config-background, white);
     font-size: calc(var(--config-font-size, 32)*1px);
     text-align: var(--config-align, left);
     justify-content: safe var(--config-align, left)

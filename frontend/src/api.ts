@@ -73,7 +73,7 @@ export type Widget = {
 export type LocalizedValue = string | Record<string, string>
 
 export type WidgetSettingsField = {
-  control?: 'text' | 'password' | 'textarea' | 'number' | 'range' | 'select' | 'segmented' | 'toggle'
+  control?: 'text' | 'password' | 'textarea' | 'number' | 'range' | 'select' | 'segmented' | 'toggle' | 'color'
   label?: LocalizedValue
   help?: LocalizedValue
   placeholder?: LocalizedValue

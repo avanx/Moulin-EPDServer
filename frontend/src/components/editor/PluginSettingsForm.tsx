@@ -9,7 +9,17 @@ type Props = {
   meta: WidgetMeta
   value: Record<string, unknown>
   language: string
+  /** Screen palette; `color` controls only offer these. Omit to show every color. */
+  availableColors?: string[]
   onChange: (next: Record<string, unknown>) => void
+}
+
+/** Physical EPD palette shown on `color` control swatches. */
+const paletteSwatches: Record<string, string> = {
+  black: '#111111',
+  white: '#ffffff',
+  red: '#dc0000',
+  yellow: '#ffdc00',
 }
 
 function localized(
@@ -26,6 +36,7 @@ export default function PluginSettingsForm({
   meta,
   value,
   language,
+  availableColors,
   onChange,
 }: Props) {
   const properties = meta.configSchema.properties || {}
@@ -82,6 +93,35 @@ export default function PluginSettingsForm({
         />
         <i aria-hidden="true" />
       </label>
+    }
+
+    if (control === 'color' && options) {
+      const usable = availableColors
+        ? options.filter(option => availableColors.includes(String(option.value)))
+        : options
+      // Nothing to choose on this screen (e.g. only one usable color).
+      if (usable.length < 2) return null
+      return <div className="plugin-settings-field" key={key}>
+        <span>{label}</span>
+        <div className="plugin-settings-colors" role="radiogroup" aria-label={label}>
+          {usable.map(option => {
+            const name = localized(option.label, language, String(option.value))
+            return <button
+              type="button"
+              role="radio"
+              aria-checked={String(current) === String(option.value)}
+              className={String(current) === String(option.value) ? 'active' : ''}
+              key={String(option.value)}
+              title={name}
+              onClick={() => update(key, option.value)}
+            >
+              <i style={{ background: paletteSwatches[String(option.value)] ?? String(option.value) }} />
+              {name}
+            </button>
+          })}
+        </div>
+        {help && <small>{help}</small>}
+      </div>
     }
 
     if (control === 'segmented' && options) {
