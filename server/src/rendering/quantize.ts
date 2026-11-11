@@ -76,7 +76,14 @@ export async function quantizeBw(
   return quantizeBwRaw(await readRawImage(input), threshold);
 }
 
-export function quantizeBwryRaw(image: RawImage): QuantizedBwryImage {
+/**
+ * Maps pixels onto the BWRY palette. `accents` limits which accent indexes
+ * (1=yellow, 2=red) may be produced, so BWR screens reuse the same logic.
+ */
+export function quantizeBwryRaw(
+  image: RawImage,
+  accents: readonly number[] = [1, 2],
+): QuantizedBwryImage {
   assertRawImage(image);
   const output = Buffer.allocUnsafe(image.width * image.height);
 
@@ -86,13 +93,13 @@ export function quantizeBwryRaw(image: RawImage): QuantizedBwryImage {
     const green = image.channels === 1 ? red : image.data[offset + 1]!;
     const blue = image.channels === 1 ? red : image.data[offset + 2]!;
     const luminance = Math.floor((299 * red + 587 * green + 114 * blue + 500) / 1000);
-    let bestIndex = 1;
+    let bestIndex = 0;
     let bestDistance = Number.POSITIVE_INFINITY;
 
     // Only pixels sufficiently close to a physical accent color become red or
     // yellow. Colored subpixel-antialiasing fringes are otherwise quantized by
     // luminance, so black text stays achromatic.
-    for (let index = 1; index <= 2; index += 1) {
+    for (const index of accents) {
       const color = BWRY_PALETTE[index]!;
       const distance =
         (red - color[0]) ** 2 +
@@ -112,6 +119,11 @@ export function quantizeBwryRaw(image: RawImage): QuantizedBwryImage {
 
 export async function quantizeBwry(input: SharpInput): Promise<QuantizedBwryImage> {
   return quantizeBwryRaw(await readRawImage(input));
+}
+
+/** Black / white / red only; indexes 0=white, 2=red, 3=black. */
+export async function quantizeBwr(input: SharpInput): Promise<QuantizedBwryImage> {
+  return quantizeBwryRaw(await readRawImage(input), [2]);
 }
 
 export async function bwToPng(image: QuantizedBwImage): Promise<Buffer> {

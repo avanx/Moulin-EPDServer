@@ -8,7 +8,7 @@
 
 - **可视化编排**：拖拽布局组件，支持多屏独立管理与 API Key
 - **服务端渲染**：HTML / CSS / SVG 组件 → Playwright 出图 → 墨水屏编码
-- **色彩模式**：黑白（`epd-bw-msb-v1`）与黑白红黄（`edp-bwry-v1`），含双面板布局
+- **色彩模式**：黑白（`epd-bw-msb-v1`）、黑白红（`epd-bwr-plane-v1`）与黑白红黄（`edp-bwry-v1`），含单面板 / 双面板布局
 - **增量刷新**：不可变快照 + 黑白局部更新，减少全屏刷写
 - **内置组件**：时钟、天气（Open-Meteo / 和风天气）、文本、矩形、Cursor / Claude Code 用量、Bambu / Klipper 打印状态等
 - **无硬件调试**：浏览器内设备模拟器，无需真机即可预览
@@ -198,7 +198,8 @@ docker compose up -d --build
 
 **帧格式**
 
-- `epd-bw-msb-v1`：逐行 MSB-first 1bpp，`1` = 黑色
+- `epd-bw-msb-v1`：逐行 MSB-first 1bpp，`1` = 黑色（所有布局一致；控制器 RAM 为 0=黑时由固件写入前取反）
+- `epd-bwr-plane-v1`：`[BW 平面][R 平面]`，各为逐行 MSB-first 1bpp；BW `0` = 黑 / `1` = 白，R `1` = 红
 - `edp-bwry-v1`：每像素 2bit — 白 `00` / 黄 `01` / 红 `10` / 黑 `11`  
   `panel_layout=dual-panel-left-right` 时，偶数宽画面按「左半面板数据 + 右半面板数据」拼接
 

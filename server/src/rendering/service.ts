@@ -17,7 +17,7 @@ import { BrowserPool } from "./browser-pool.js";
 import { composeScreenHtml } from "./compose.js";
 import { encodeDirtyBwRegions } from "./dirty-region.js";
 import { HtmlRenderer } from "./html-renderer.js";
-import { prepareFrame } from "./pipeline.js";
+import { prepareFrame, type ColorMode } from "./pipeline.js";
 import { quantizeBw } from "./quantize.js";
 import { removeSnapshotDirectories, sha256Hex, writeSnapshotAtomically } from "./snapshots.js";
 import type { EncodedDirtyRegion } from "./types.js";
@@ -246,7 +246,7 @@ export async function renderDraft(
     const composed = await composeScreen(screen, widgets, options);
     const source = await htmlRenderer.renderPng({ html: composed.html, width: screen.width, height: screen.height });
     const png = options.device
-      ? (await prepareFrame(source, screen.colorMode as "bw" | "bwry", screen.panelLayout)).previewPng
+      ? (await prepareFrame(source, screen.colorMode as ColorMode, screen.panelLayout)).previewPng
       : source;
     return { png, modes: composed.modes };
   };
@@ -299,7 +299,7 @@ export async function renderWidgetPreview(
     });
     const usesAccentColors = testManifest?.requiredColors
       .some((color) => color === "red" || color === "yellow");
-    const colorMode = testManifest && !usesAccentColors ? "bw" : screen.colorMode as "bw" | "bwry";
+    const colorMode = testManifest && !usesAccentColors ? "bw" : screen.colorMode as ColorMode;
     return (await prepareFrame(source, colorMode, "linear")).previewPng;
   });
 }
@@ -319,7 +319,7 @@ export async function publishSnapshot(
     ...(options.clockAt ? { clockAt: options.clockAt } : {}),
   });
   const source = await htmlRenderer.renderPng({ html, width: screen.width, height: screen.height });
-  const frame = await prepareFrame(source, screen.colorMode as "bw" | "bwry", screen.panelLayout);
+  const frame = await prepareFrame(source, screen.colorMode as ColorMode, screen.panelLayout);
   const frameSha256 = sha256Hex(frame.frame);
   const previous = screen.currentSnapshotId
     ? db.select().from(snapshots).where(eq(snapshots.id, screen.currentSnapshotId)).get()

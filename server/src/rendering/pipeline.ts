@@ -1,12 +1,14 @@
 import sharp from "sharp";
 
 import { composeScreenHtml } from "./compose.js";
-import { encodeBw, encodeBwry } from "./encode.js";
+import type { ColorMode } from "../color-modes.js";
+import { encodeBw, encodeBwrPlanes, encodeBwry } from "./encode.js";
 import { HtmlRenderer } from "./html-renderer.js";
 import {
   bwToPng,
   bwryToPng,
   quantizeBw,
+  quantizeBwr,
   quantizeBwry,
 } from "./quantize.js";
 import type {
@@ -17,10 +19,12 @@ import type {
   SharpInput,
 } from "./types.js";
 
-export type ColorMode = "bw" | "bwry";
+export type { ColorMode } from "../color-modes.js";
+
+export type FrameEncoding = "epd-bw-msb-v1" | "epd-bwr-plane-v1" | "edp-bwry-v1";
 
 export interface PreparedFrame {
-  readonly encoding: "epd-bw-msb-v1" | "edp-bwry-v1";
+  readonly encoding: FrameEncoding;
   readonly sourcePng: Buffer;
   readonly previewPng: Buffer;
   readonly frame: Buffer;
@@ -52,6 +56,16 @@ export async function prepareFrame(
       sourcePng,
       previewPng: await bwToPng(quantized),
       frame: encodeBw(quantized),
+      quantized,
+    };
+  }
+  if (colorMode === "bwr") {
+    const quantized = await quantizeBwr(sourcePng);
+    return {
+      encoding: "epd-bwr-plane-v1",
+      sourcePng,
+      previewPng: await bwryToPng(quantized),
+      frame: encodeBwrPlanes(quantized),
       quantized,
     };
   }

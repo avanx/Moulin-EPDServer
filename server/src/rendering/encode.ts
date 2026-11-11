@@ -13,7 +13,11 @@ function assertDimensions(
   }
 }
 
-/** MSB-first rows, 1=black, row stride ceil(width / 8). */
+/**
+ * `epd-bw-msb-v1`: MSB-first rows, 1=black, 0=white, row stride
+ * ceil(width / 8), row padding 0 (white). Same polarity for every panel
+ * layout; controllers whose RAM uses 0=black invert on the device.
+ */
 export function encodeBw(image: QuantizedBwImage): Buffer {
   assertDimensions(image.data, image.width, image.height);
   const stride = Math.ceil(image.width / 8);
@@ -24,6 +28,35 @@ export function encodeBw(image: QuantizedBwImage): Buffer {
       if (image.data[y * image.width + x] === 0) {
         output[y * stride + Math.floor(x / 8)]! |= 0x80 >> (x % 8);
       }
+    }
+  }
+  return output;
+}
+
+/**
+ * `epd-bwr-plane-v1`: `[BW plane][R plane]`, each 1bpp MSB-first with row
+ * stride ceil(width / 8).
+ *
+ * - BW plane: 0=black, 1=white (red pixels are white here)
+ * - R plane: 1=red, 0=not red
+ *
+ * Input uses BWRY palette indexes; yellow (1) is rejected.
+ */
+export function encodeBwrPlanes(image: QuantizedBwryImage): Buffer {
+  assertDimensions(image.data, image.width, image.height);
+  const stride = Math.ceil(image.width / 8);
+  const plane = stride * image.height;
+  const output = Buffer.alloc(plane * 2);
+  output.fill(0xff, 0, plane);
+  for (let y = 0; y < image.height; y += 1) {
+    for (let x = 0; x < image.width; x += 1) {
+      const pixel = y * image.width + x;
+      const value = image.data[pixel]!;
+      const offset = y * stride + Math.floor(x / 8);
+      const mask = 0x80 >> (x % 8);
+      if (value === 3) output[offset]! &= ~mask;
+      else if (value === 2) output[plane + offset]! |= mask;
+      else if (value !== 0) throw new RangeError(`Invalid BWR palette index ${value} at pixel ${pixel}`);
     }
   }
   return output;
@@ -49,7 +82,7 @@ export function encodeBwry(
   panelLayout: PanelLayout,
 ): Buffer {
   assertDimensions(image.data, image.width, image.height);
-  if (panelLayout === "linear") {
+  if (panelLayout !== "dual-panel-left-right") {
     return pack2Bpp(image.data);
   }
   if (image.width % 2 !== 0) {

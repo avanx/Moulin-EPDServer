@@ -5,6 +5,7 @@ import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
 import { and, asc, desc, eq, ne, or } from "drizzle-orm";
 import sharp from "sharp";
 
+import { colorModeColors, isColorMode, isPanelLayout, layoutSupportsColorMode } from "../color-modes.js";
 import { config } from "../config.js";
 import { db, sqlite } from "../db/index.js";
 import {
@@ -38,8 +39,7 @@ const now = (): string => new Date().toISOString();
 const object = (value: unknown): Json => value && typeof value === "object" && !Array.isArray(value) ? value as Json : {};
 const integer = (value: unknown, fallback = 0): number => Number.isInteger(value) ? value as number : fallback;
 const bool = (value: unknown, fallback = false): boolean => typeof value === "boolean" ? value : fallback;
-const availableColors = (colorMode: string): Set<string> =>
-  new Set(colorMode === "bwry" ? ["black", "white", "red", "yellow"] : ["black", "white"]);
+const availableColors = (colorMode: string): Set<string> => new Set(colorModeColors(colorMode));
 
 function pluginSupportsColorMode(type: string, colorMode: string): boolean {
   try {
@@ -180,7 +180,7 @@ function screenJson(row: Screen, owners?: Map<string, string>): Json {
   return {
     id: row.id, name: row.name, width: row.width, height: row.height, color_mode: row.colorMode,
     panel_layout: row.panelLayout,
-    available_colors: row.colorMode === "bwry" ? ["black", "white", "red", "yellow"] : ["black", "white"],
+    available_colors: colorModeColors(row.colorMode),
     refresh_seconds: row.refreshSeconds, panel_latency_seconds: row.panelLatencySeconds, timezone: row.timezone,
     silent_enabled: row.silentEnabled, silent_start: row.silentStart, silent_end: row.silentEnd,
     silent_active: isSilentAt(row), enabled: row.enabled,
@@ -246,9 +246,9 @@ function parseScreen(body: unknown, allowLegacyPanelLayout = false): ScreenValue
   const silentEnd = String(value.silent_end ?? "07:00");
   const silentEnabled = bool(value.silent_enabled, false);
   if (!name || name.length > 120 || width < 16 || width > 4096 || height < 16 || height > 4096 ||
-      !["bw", "bwry"].includes(colorMode) || refreshSeconds < 2 || refreshSeconds > 86400 ||
+      !isColorMode(colorMode) || refreshSeconds < 2 || refreshSeconds > 86400 ||
       panelLatencySeconds < 0 || panelLatencySeconds > 86400 ||
-      !["linear", "dual-panel-left-right"].includes(panelLayout) ||
+      !isPanelLayout(panelLayout) || !layoutSupportsColorMode(panelLayout, colorMode) ||
       (panelLayout === "dual-panel-left-right" && width % 2 !== 0) ||
       !isValidTimeZone(timezone) || !isValidClock(silentStart) || !isValidClock(silentEnd) ||
       (silentEnabled && silentStart === silentEnd) ||

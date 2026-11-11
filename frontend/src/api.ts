@@ -1,4 +1,6 @@
-export type PanelLayout = 'linear' | 'dual-panel-left-right'
+export type PanelLayout = 'single' | 'linear' | 'dual-panel-left-right'
+
+export type ColorMode = 'bw' | 'bwr' | 'bwry'
 
 export type UserRole = 'admin' | 'user'
 
@@ -20,7 +22,7 @@ export type Screen = {
   name: string
   width: number
   height: number
-  color_mode: 'bw' | 'bwry'
+  color_mode: ColorMode
   panel_layout: PanelLayout
   available_colors: string[]
   refresh_seconds: number

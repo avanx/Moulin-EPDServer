@@ -4,6 +4,7 @@ import { basename, dirname, join, resolve } from "node:path";
 
 import Ajv2020Module, { type ValidateFunction } from "ajv/dist/2020.js";
 
+import { colorModeColors } from "../color-modes.js";
 import { config } from "../config.js";
 import { compileDataSource } from "./data-runner.js";
 
@@ -773,9 +774,7 @@ export class WidgetRegistry {
     const style = widget.styles.get(styleId);
     if (!style) throw new Error(`Unknown style '${styleId}' for widget ${type}`);
     if (colorMode) {
-      const available = colorMode === "bwry"
-        ? new Set(["black", "white", "red", "yellow"])
-        : new Set(["black", "white"]);
+      const available = new Set(colorModeColors(colorMode));
       const missing = style.requiredColors.filter((color) => !available.has(color));
       if (missing.length) throw new Error(`Style '${styleId}' for widget ${type} requires colors unavailable on ${colorMode}: ${missing.join(", ")}`);
     }

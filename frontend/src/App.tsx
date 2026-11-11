@@ -5,10 +5,12 @@ import { Copy, Database, FileUp, Globe2, KeyRound, LayoutDashboard, LogOut, Moni
 import { useTranslation } from 'react-i18next'
 import { Link, Redirect, Route, Switch, useLocation } from 'wouter'
 import { api, login, logout, restoreSession } from './api'
-import type { AuthUser, ManagedUser, Screen, ScreenDocument } from './api'
+import type { AuthUser, ColorMode, ManagedUser, PanelLayout, Screen, ScreenDocument } from './api'
 import DataSourcesPage from './components/data-sources/DataSourcesPage'
 import EditorPage from './components/editor/EditorPage'
 import PluginMarketplacePage from './components/plugins/PluginMarketplacePage'
+import ColorModeBadge from './components/ColorModeBadge'
+import { colorModeOptions, layoutAllowed, panelLayoutOptions, screenPresets } from './screen-modes'
 import { sha256Hex } from './sha256'
 import './App.css'
 
@@ -116,20 +118,43 @@ function ScreenForm({ close }: { close: () => void }) {
     mutationFn: (body: object) => api<Screen>('/api/v1/admin/screens', { method: 'POST', body: JSON.stringify(body) }),
     onSuccess: () => { client.invalidateQueries({ queryKey: ['screens'] }); close() },
   })
+  const [frame, setFrame] = useState<{ width: number; height: number; color_mode: ColorMode; panel_layout: PanelLayout | '' }>({ width: 800, height: 480, color_mode: 'bw', panel_layout: '' })
+  const preset = screenPresets.find(item => item.width === frame.width && item.height === frame.height && item.color_mode === frame.color_mode && item.panel_layout === frame.panel_layout)?.id ?? ''
+  function applyPreset(id: string) {
+    const item = screenPresets.find(value => value.id === id)
+    if (item) setFrame({ width: item.width, height: item.height, color_mode: item.color_mode, panel_layout: item.panel_layout })
+  }
+  function setColorMode(color_mode: ColorMode) {
+    setFrame(value => ({ ...value, color_mode, panel_layout: value.panel_layout && !layoutAllowed(color_mode, value.panel_layout) ? '' : value.panel_layout }))
+  }
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); const f = new FormData(event.currentTarget)
-    create.mutate({ name: f.get('name'), width: Number(f.get('width')), height: Number(f.get('height')), color_mode: f.get('color'), panel_layout: f.get('panel_layout'), refresh_seconds: Number(f.get('interval')), panel_latency_seconds: Number(f.get('panel_latency')), enabled: true })
+    create.mutate({ name: f.get('name'), ...frame, refresh_seconds: Number(f.get('interval')), panel_latency_seconds: Number(f.get('panel_latency')), enabled: true })
   }
   return <div className="dialog-backdrop"><form className="card dialog" onSubmit={submit}><h2>{t('createScreen')}</h2>
     <Field label={t('name')}><input name="name" required defaultValue="EPD Display" /></Field>
-    <div className="grid-2"><Field label="Width"><input name="width" type="number" min="16" max="4096" defaultValue="800" /></Field><Field label="Height"><input name="height" type="number" min="16" max="4096" defaultValue="480" /></Field></div>
-    <Field label={t('color')}><select name="color"><option value="bw">Black / White</option><option value="bwry">Black / White / Red / Yellow</option></select></Field>
-    <Field label={t('panelLayout')}><select name="panel_layout" required defaultValue=""><option value="" disabled>{t('selectPanelLayout')}</option><option value="linear">{t('panelLayoutLinear')}</option><option value="dual-panel-left-right">{t('panelLayoutDualLeftRight')}</option></select></Field>
+    <Field label={t('screenPreset')} hint={t('screenPresetHint')}><select value={preset} onChange={event => applyPreset(event.target.value)}><option value="">{t('screenPresetCustom')}</option>{screenPresets.map(item => <option key={item.id} value={item.id}>{t(item.labelKey)}</option>)}</select></Field>
+    <div className="grid-2"><Field label="Width"><input name="width" type="number" min="16" max="4096" required value={frame.width} onChange={event => setFrame(value => ({ ...value, width: Number(event.target.value) }))} /></Field><Field label="Height"><input name="height" type="number" min="16" max="4096" required value={frame.height} onChange={event => setFrame(value => ({ ...value, height: Number(event.target.value) }))} /></Field></div>
+    <Field label={t('color')}><select name="color" value={frame.color_mode} onChange={event => setColorMode(event.target.value as ColorMode)}>{colorModeOptions.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select></Field>
+    <Field label={t('panelLayout')} hint={frame.color_mode === 'bwr' ? t('panelLayoutBwrHint') : undefined}><select name="panel_layout" required value={frame.panel_layout} onChange={event => setFrame(value => ({ ...value, panel_layout: event.target.value as PanelLayout }))}><option value="" disabled>{t('selectPanelLayout')}</option>{panelLayoutOptions.filter(item => layoutAllowed(frame.color_mode, item.value)).map(item => <option key={item.value} value={item.value}>{t(item.labelKey)}</option>)}</select></Field>
     <Field label={t('interval')}><input name="interval" type="number" min="2" defaultValue="900" /></Field>
     <Field label={t('panelLatency')} hint={t('panelLatencyHint')}><input name="panel_latency" type="number" min="0" max="86400" defaultValue="0" /></Field>
     {create.error && <p className="error">{String(create.error)}</p>}
     <div className="dialog-actions"><Button type="button" variant="outline" onClick={close}>{t('cancel')}</Button><Button type="submit">{t('save')}</Button></div>
   </form></div>
+}
+
+function ScreenThumb({ screen }: { screen: Screen }) {
+  const { t } = useTranslation()
+  const [failed, setFailed] = useState('')
+  const snapshotId = screen.current_snapshot_id
+  const showFrame = Boolean(snapshotId) && failed !== snapshotId
+  return <div className={`screen-thumb ${showFrame ? 'has-frame' : 'empty-frame'}`}>
+    {showFrame
+      ? <img className="screen-thumb-frame" src={`/api/v1/admin/screens/${screen.id}/preview?mode=device&v=${snapshotId}`} alt={screen.name} loading="lazy" onError={() => setFailed(snapshotId ?? '')} />
+      : <div className="screen-thumb-placeholder" title={t('noSnapshotYet')}><span className="brand-mark"><img src="/logo.png" alt="" /></span></div>}
+    <ColorModeBadge mode={screen.color_mode} className="screen-thumb-badge" />
+  </div>
 }
 
 function ScreensPage() {
@@ -186,7 +211,7 @@ function ScreensPage() {
     {importError && <p className="error">{importError}</p>}
     {shownKey && <div className="notice"><b>{t(keyCopied ? 'keyCopiedAutomatically' : 'copyKeyNow')}</b><code>{shownKey}</code><Button variant="outline" onClick={async () => { try { await copyText(shownKey); setKeyCopied(true) } catch { setKeyCopied(false) } }}><Copy size={16} />{t('copy')}</Button></div>}
     <div className="screen-grid">{!isLoading && !data.length && <div className="empty card">{t('noScreens')}</div>}{data.map(screen => <article className="card screen-card" key={screen.id}>
-      <div className="screen-thumb"><Monitor size={32} /><span className={`badge ${screen.color_mode}`}>{screen.color_mode.toUpperCase()}</span></div>
+      <ScreenThumb screen={screen} />
       <div><h3>{screen.name}</h3><p className="muted">{screen.width} × {screen.height} · {screen.refresh_seconds}s{screen.silent_enabled ? ` · ${t('silentTime')} ${screen.silent_start}–${screen.silent_end}` : ''}{isAdmin && screen.owner_username ? ` · ${t('owner')}: ${screen.owner_username}` : ''}</p><button className="screen-id-copy" type="button" onClick={() => void copyScreenId(screen.id)} title={t('copyScreenId')}><span>{t('screenId')}</span><code>{screen.id}</code><Copy size={13} /></button></div>
       <div className="screen-actions"><Link className="button default" href={`/screens/${screen.id}`}><Settings2 size={16} />{t('editor')}</Link><Button variant="outline" onClick={() => generateKey(screen.id)}><KeyRound size={16} />{t('createKey')}</Button></div>
     </article>)}</div>{copiedScreenId && <div className="toast">{t('screenIdCopied')}</div>}{open && <ScreenForm close={() => setOpen(false)} />}</>
@@ -711,7 +736,7 @@ function UsersPage() {
   </>
 }
 
-type Manifest = { snapshot_id: string; update_type: 'full' | 'partial'; width: number; height: number; color_mode: 'bw' | 'bwry'; panel_layout: Screen['panel_layout']; encoding: string; frame_url: string; sha256: string; regions: Array<{ x: number; y: number; width: number; height: number; stride?: number; plane_byte_size?: number; url: string; sha256: string }> }
+type Manifest = { snapshot_id: string; update_type: 'full' | 'partial'; width: number; height: number; color_mode: ColorMode; panel_layout: Screen['panel_layout']; encoding: string; frame_url: string; sha256: string; regions: Array<{ x: number; y: number; width: number; height: number; stride?: number; plane_byte_size?: number; url: string; sha256: string }> }
 
 function SimulatorPage() {
   const { t } = useTranslation(); const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -724,9 +749,13 @@ function SimulatorPage() {
     const context = canvas.getContext('2d')!; const image = region ? context.getImageData(0, 0, canvas.width, canvas.height) : context.createImageData(canvas.width, canvas.height)
     const colors = [[255,255,255], [255,220,0], [220,0,0], [0,0,0]]
     const target = region || { x: 0, y: 0, width: manifest.width, height: manifest.height }
+    const stride = Math.ceil(target.width / 8), bwrPlane = stride * target.height
+    const bit = (byte: number, x: number) => (byte >> (7 - x % 8)) & 1
     for (let y = 0; y < target.height; y++) for (let x = 0; x < target.width; x++) {
       let value: number
-      if (manifest.color_mode === 'bw') value = (data[y * Math.ceil(target.width / 8) + Math.floor(x / 8)] >> (7 - x % 8)) & 1
+      const byteIndex = y * stride + Math.floor(x / 8)
+      if (manifest.color_mode === 'bw') value = bit(data[byteIndex], x) ? 3 : 0
+      else if (manifest.color_mode === 'bwr') value = bit(data[bwrPlane + byteIndex], x) ? 2 : bit(data[byteIndex], x) ? 0 : 3
       else {
         const panelWidth = manifest.width / 2
         const dualPanel = manifest.panel_layout === 'dual-panel-left-right'
@@ -737,7 +766,7 @@ function SimulatorPage() {
         const byteOffset = dualPanel ? panel * Math.ceil(panelWidth * manifest.height / 4) : 0
         value = (data[byteOffset + Math.floor(streamIndex / 4)] >> (6 - 2 * (streamIndex % 4))) & 3
       }
-      const color = manifest.color_mode === 'bw' ? (value ? [0,0,0] : [255,255,255]) : colors[value]
+      const color = colors[value]
       const offset = ((target.y + y) * manifest.width + target.x + x) * 4
       image.data.set([...color, 255], offset)
     }

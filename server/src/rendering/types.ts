@@ -1,7 +1,7 @@
 import type sharp from "sharp";
 
 export type SharpInput = Parameters<typeof sharp>[0];
-export type PanelLayout = "linear" | "dual-panel-left-right";
+export type { PanelLayout } from "../color-modes.js";
 
 export interface RawImage {
   readonly data: Buffer;
@@ -18,7 +18,7 @@ export interface QuantizedBwImage {
 }
 
 export interface QuantizedBwryImage {
-  /** Palette indexes: 0=white, 1=yellow, 2=red, 3=black. */
+  /** Palette indexes: 0=white, 1=yellow, 2=red, 3=black (BWR images never use 1). */
   readonly data: Buffer;
   readonly width: number;
   readonly height: number;

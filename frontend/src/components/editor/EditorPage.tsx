@@ -204,8 +204,8 @@ function ScreenSettings({ screen }: { screen: Screen }) {
   return <form className="schema-form" onSubmit={submit}>
     <Field label={t('name')}><input name="name" defaultValue={screen.name} /></Field>
     <div className="grid-2"><Field label="Width"><input name="width" type="number" defaultValue={screen.width} /></Field><Field label="Height"><input name="height" type="number" defaultValue={screen.height} /></Field></div>
-    <Field label={t('color')}><select name="color_mode" defaultValue={screen.color_mode}><option value="bw">BW</option><option value="bwry">BWRY</option></select></Field>
-    <Field label={t('panelLayout')}><select name="panel_layout" required defaultValue={screen.panel_layout}><option value="linear">{t('panelLayoutLinear')}</option><option value="dual-panel-left-right">{t('panelLayoutDualLeftRight')}</option></select></Field>
+    <Field label={t('color')}><select name="color_mode" defaultValue={screen.color_mode}><option value="bw">BW</option><option value="bwr">BWR</option><option value="bwry">BWRY</option></select></Field>
+    <Field label={t('panelLayout')}><select name="panel_layout" required defaultValue={screen.panel_layout}><option value="single">{t('panelLayoutSingle')}</option><option value="linear">{t('panelLayoutLinear')}</option><option value="dual-panel-left-right">{t('panelLayoutDualLeftRight')}</option></select></Field>
     <Field label={t('interval')}><input name="refresh_seconds" type="number" min="2" defaultValue={screen.refresh_seconds} /></Field>
     <Field label={t('panelLatency')} hint={t('panelLatencyHint')}><input name="panel_latency_seconds" type="number" min="0" max="86400" defaultValue={screen.panel_latency_seconds ?? 0} /></Field>
     <Field label={t('timezone')} hint={t('timezoneHint')}>

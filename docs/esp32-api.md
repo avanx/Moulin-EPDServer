@@ -117,8 +117,8 @@ Accept: application/json
 | `base_snapshot_id` | string/null | 该局部快照依赖的基线；全量更新时通常为 `null` |
 | `update_type` | `"full"`/`"partial"` | 本次应执行全量更新还是局部更新 |
 | `width`、`height` | integer | 完整画面的像素尺寸 |
-| `color_mode` | `"bw"`/`"bwry"` | 黑白或黑白红黄模式 |
-| `panel_layout` | `"linear"`/`"dual-panel-left-right"` | 像素流的面板排列方式；对 `bw` 编码不产生影响 |
+| `color_mode` | `"bw"`/`"bwr"`/`"bwry"` | 黑白、黑白红或黑白红黄模式 |
+| `panel_layout` | `"single"`/`"linear"`/`"dual-panel-left-right"` | 像素流的面板排列方式；对 `bw` / `bwr` 编码不影响字节内容 |
 | `encoding` | string | 二进制编码，见“像素数据格式” |
 | `refresh_after_seconds` | integer | 建议的下一次轮询间隔 |
 | `byte_size` | integer | 完整帧的字节数，即使本次为局部更新也仍描述完整帧 |
@@ -139,9 +139,22 @@ Accept: application/json
 | `sha256` | string | 区域文件（含 old+new 整包）的 SHA-256 |
 | `url` | string | 区域文件绝对 URL |
 
-当前服务端只对 `bw` 黑白屏生成局部更新。只有设备提交的 `base_snapshot_id` 与目标快照要求的基线完全一致时，服务端才返回 `partial`；其余情况自动返回 `full`。服务端按组件矩形拆分脏区（外加组件外残留），仅在画面尺寸一致、确有像素变化且各局部区域合计面积不超过整屏 35% 时生成一个或多个局部区域，否则生成全量更新。
+当前服务端只对 `bw` 黑白屏生成局部更新（`bwr` / `bwry` 始终为全量）。只有设备提交的 `base_snapshot_id` 与目标快照要求的基线完全一致时，服务端才返回 `partial`；其余情况自动返回 `full`。服务端按组件矩形拆分脏区（外加组件外残留），仅在画面尺寸一致、确有像素变化且各局部区域合计面积不超过整屏 35% 时生成一个或多个局部区域，否则生成全量更新。
 
 客户端应按 `regions` 数组顺序下载并应用全部区域；不要假设每个快照只有一个局部区域。
+
+### 屏幕兼容性校验
+
+清单中与屏幕相关的字段必须与设备当前驱动的屏幕完全一致，否则设备应判定为不兼容、不下载帧并按退避策略重试（通常意味着管理端的屏幕配置与实际硬件不符）：
+
+| 屏幕 | `color_mode` | `encoding` | `panel_layout` | `width` | `height` | `byte_size` |
+| --- | --- | --- | --- | --- | --- | --- |
+| 彩色 10.85" | `bwry` | `edp-bwry-v1` | `dual-panel-left-right` | 1360 | 480 | 163200 |
+| 单色 10.85" | `bw` | `epd-bw-msb-v1` | `dual-panel-left-right` | 1360 | 480 | 81600 |
+| HINK 4.2" 黑白红 | `bwr` | `epd-bwr-plane-v1` | `single` | 400 | 300 | 30000 |
+| HINK 2.13" 黑白 | `bw` | `epd-bw-msb-v1` | `single` | 128 | 250 | 4000 |
+
+管理端新建屏幕时可直接选用上述预设。
 
 ### `304 Not Modified` 响应
 
@@ -265,10 +278,12 @@ Content-Range: bytes */<total_size>
 
 ### 7.1 `epd-bw-msb-v1`
 
-适用于 `color_mode = "bw"`，每像素 1 bit：
+适用于 `color_mode = "bw"`，每像素 1 bit，所有 `panel_layout` 极性相同：
 
 - `0`：白色
 - `1`：黑色
+- 局部区域文件的 old / new 平面使用相同极性
+- SSD16xx / IL3895 等控制器 RAM 为 `0`=黑 / `1`=白，设备写入 RAM 前须逐字节取反（`~byte`）
 - 行优先，从上到下排列
 - 每行从左到右
 - 每字节最高位对应最左侧像素，即 MSB-first
@@ -290,7 +305,27 @@ uint8_t value = data[y * stride + x / 8];
 bool isBlack = (value & (0x80 >> (x % 8))) != 0;
 ```
 
-### 7.2 `edp-bwry-v1`
+示例：
+
+- 1360 × 480 单色（`dual-panel-left-right`）：每行 170 B = 85 B（左面板）+ 85 B（右面板），共 480 行，81600 B。数据为整幅行优先，设备自行按 85 B 切分左右面板。
+- HINK 2.13" 黑白（`single`）：每行 16 B × 250 行 = 4000 B，`1`=黑 / `0`=白（写入控制器 RAM 前取反）。控制器逻辑宽度 128，可见宽度 122，右侧 6 列对面板无效，布局时应避免把内容放到 `x ≥ 122` 的区域。
+
+### 7.2 `epd-bwr-plane-v1`
+
+适用于 `color_mode = "bwr"`（当前仅支持 `panel_layout = "single"`），由两个 1bpp 平面顺序拼接：
+
+```text
+[BW 平面 stride*height 字节][R 平面 stride*height 字节]
+```
+
+- 每个平面行优先、MSB-first，每行步长 `ceil(width / 8)`，行尾补位为白 / 非红
+- BW 平面：`0` = 黑，`1` = 白；红色像素在 BW 平面中为 `1`（白）
+- R 平面：`1` = 红，`0` = 非红
+- 总字节数 `2 * ceil(width / 8) * height`
+
+对于 HINK 4.2" 黑白红 400 × 300：每平面每行 50 B × 300 行 = 15000 B，完整帧 `[BW 15000][R 15000]` = 30000 B。SSD1619 等控制器的红色 RAM 极性与此相反时，由驱动写入时按厂商例程取反。BWR 屏不生成局部更新。
+
+### 7.3 `edp-bwry-v1`
 
 适用于 `color_mode = "bwry"`，每像素 2 bit：
 
@@ -310,7 +345,7 @@ bit 3..2 = 像素 2
 bit 1..0 = 像素 3
 ```
 
-当 `panel_layout = "linear"` 时，按整幅图像行优先的像素序列连续打包，总字节数为 `ceil(width * height / 4)`。当一行宽度不是 4 的倍数时，下一行可能接续在同一字节中，客户端不应假定每行独立字节对齐。
+当 `panel_layout = "linear"` 或 `"single"` 时，按整幅图像行优先的像素序列连续打包，总字节数为 `ceil(width * height / 4)`。当一行宽度不是 4 的倍数时，下一行可能接续在同一字节中，客户端不应假定每行独立字节对齐。
 
 #### 左右双面板顺序
 

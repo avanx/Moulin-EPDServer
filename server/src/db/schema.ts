@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import type { PanelLayout } from "../color-modes.js";
 import {
   index,
   integer,
@@ -56,7 +57,7 @@ export const screens = sqliteTable("screens", {
   height: integer("height").notNull(),
   colorMode: text("color_mode", { length: 8 }).notNull().default("bw"),
   panelLayout: text("panel_layout", { length: 32 })
-    .$type<"linear" | "dual-panel-left-right">()
+    .$type<PanelLayout>()
     .notNull()
     .default("linear"),
   refreshSeconds: integer("refresh_seconds").notNull().default(900),
